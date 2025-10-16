@@ -1,15 +1,13 @@
-use std::os::unix::prelude::{AsFd, AsRawFd as _};
+use std::os::unix::prelude::AsRawFd as _;
 
 use mio::Interest;
 use mio::unix::SourceFd;
-use wayland_client::protocol::{wl_compositor, wl_registry, wl_shm};
-use wayland_client::{Connection, Dispatch, Proxy, QueueHandle};
-
-use crate::collector::Collector;
+use wayland_client::Connection;
 
 const STDIN_TOKEN: mio::Token = mio::Token(0);
 const WAYLAND_TOKEN: mio::Token = mio::Token(1);
 
+use crate::collector::Collector;
 mod collector;
 mod state;
 
