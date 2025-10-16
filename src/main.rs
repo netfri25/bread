@@ -7,9 +7,11 @@ use wayland_client::Connection;
 const STDIN_TOKEN: mio::Token = mio::Token(0);
 const WAYLAND_TOKEN: mio::Token = mio::Token(1);
 
-use crate::collector::Collector;
 mod collector;
+mod parser;
 mod state;
+
+use crate::collector::Collector;
 
 fn main() {
     // implemented the dispatch using two steps:
@@ -76,9 +78,12 @@ fn main() {
                 STDIN_TOKEN => {
                     let mut line = String::new();
                     std::io::stdin().read_line(&mut line).unwrap();
-                    println!("line: {:?}", line);
                     if line.is_empty() {
                         state.stop_running()
+                    }
+
+                    for token in parser::parse(line.trim()) {
+                        println!("token: {:?}", token);
                     }
                 }
 
