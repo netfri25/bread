@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+mio = { version = "1.0.4", features = ["os-poll", "os-ext"] }
 tempfile = "3.23.0"
 wayland-client = { version = "0.31.11", default-features = false }
 wayland-protocols = { version = "0.32.9", features = ["client"] }

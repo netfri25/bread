@@ -7,7 +7,7 @@ simple, non-interactlable, controlled from stdin, wayland status bar.
  - non-interactable (by design)
  - controlled from stdin with simple but powerful attributes
  - single threaded (by design)
- - efficient polling system (TBD)
+ - efficient polling system
 
 ### build dependencies
  - [rust](https://rust-lang.org)
@@ -31,7 +31,7 @@ the only things I had issues with while trying out zelbar is that I wasn't able 
  - [ ] multi monitor rendering
  - [ ] input parsing
  - [ ] rendering
- - [ ] async polling
+ - [x] async polling
 
 ### Special thanks
 [zelbar](https://sr.ht/~novakane/zelbar/), which inspired this project.

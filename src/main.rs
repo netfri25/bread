@@ -1,7 +1,9 @@
 use std::fs::File;
-use std::io::Seek;
-use std::os::unix::prelude::AsFd as _;
+use std::io::Seek as _;
+use std::os::unix::prelude::{AsFd, AsRawFd as _};
 
+use mio::Interest;
+use mio::unix::SourceFd;
 use wayland_client::protocol::{
     wl_buffer, wl_compositor, wl_registry, wl_shm, wl_shm_pool, wl_surface,
 };
@@ -10,6 +12,9 @@ use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_shell_v1::{self, 
 use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_surface_v1::{
     self, Anchor, KeyboardInteractivity,
 };
+
+const STDIN_TOKEN: mio::Token = mio::Token(0);
+const WAYLAND_TOKEN: mio::Token = mio::Token(1);
 
 fn main() {
     // implemented the dispatch using two steps:
@@ -40,10 +45,68 @@ fn main() {
         .blocking_dispatch(&mut collector)
         .unwrap();
 
-    // main loop
+    // used for polling efficiently from both stdin and the wayland socket
+    let mut poll = mio::Poll::new().expect("unable to create Poll instance");
+
+    let stdin_fd = std::io::stdin().as_raw_fd();
+    poll.registry()
+        .register(&mut SourceFd(&stdin_fd), STDIN_TOKEN, Interest::READABLE)
+        .expect("unable to register stdin");
+
+    let mut events = mio::Events::with_capacity(16);
+
     let mut state = collector.collect(&qhandle);
-    loop {
-        event_queue.blocking_dispatch(&mut state).unwrap();
+    event_queue.roundtrip(&mut state).unwrap();
+
+    while state.running {
+        // taken from https://docs.rs/wayland-client/latest/wayland_client/struct.EventQueue.html#integrating-the-event-queue-with-other-sources-of-events
+        event_queue.flush().unwrap();
+        event_queue.dispatch_pending(&mut state).unwrap();
+
+        // register the current wayland socket (`read_guard.connection_fd()` might return a different FD)
+        let read_guard = event_queue.prepare_read().unwrap();
+        let wayland_fd = read_guard.connection_fd().as_raw_fd();
+        let mut wayland_source = SourceFd(&wayland_fd);
+        poll.registry()
+            .register(&mut wayland_source, WAYLAND_TOKEN, Interest::READABLE)
+            .unwrap();
+
+        let mut read_guard = Some(read_guard);
+
+        // poll both the wayland socket and stdin
+        poll.poll(&mut events, None).unwrap();
+
+        // go over all of the events that resulted from the poll
+        for event in events.iter() {
+            match event.token() {
+                STDIN_TOKEN => {
+                    let mut line = String::new();
+                    std::io::stdin().read_line(&mut line).unwrap();
+                    println!("line: {:?}", line);
+                    if line.is_empty() {
+                        state.running = false;
+                    }
+                }
+
+                WAYLAND_TOKEN => {
+                    // since the read guard should be read only once, it's contained inside an
+                    // Option so that it can be taken and used only once inside a loop.
+                    let Some(read_guard) = read_guard.take() else {
+                        unreachable!("too many wayland events")
+                    };
+
+                    read_guard.read().unwrap();
+                    event_queue.dispatch_pending(&mut state).unwrap();
+                }
+
+                token => {
+                    eprintln!("WARN: unexpected token from polling: {:?}", token)
+                }
+            }
+        }
+
+        // remove the wayland socket, since it might change
+        poll.registry().deregister(&mut wayland_source).unwrap();
     }
 }
 
@@ -114,6 +177,7 @@ impl Dispatch<wl_registry::WlRegistry, QueueHandle<State>> for Collector {
 }
 
 pub struct State {
+    running: bool,
     file: File,
     surface: wl_surface::WlSurface,
     shm: wl_shm::WlShm,
@@ -160,6 +224,7 @@ impl State {
         pool.destroy();
 
         Self {
+            running: true,
             file,
             surface,
             shm,
