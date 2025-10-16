@@ -21,11 +21,11 @@ pub enum Token<'a> {
     /// %{l} %{c} %{r}
     Alignment(Alignment),
 
-    /// change of background color
+    /// change of foreground color
     /// %{F:[AA]RRGGBB}
     Fg(Color),
 
-    /// change of foreground color
+    /// change of background color
     /// %{B:[AA]RRGGBB}
     Bg(Color),
 
