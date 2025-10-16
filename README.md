@@ -29,7 +29,7 @@ the only things I had issues with while trying out zelbar is that I wasn't able 
 
 ### TODO
  - [ ] multi monitor rendering
- - [ ] input parsing
+ - [x] input parsing
  - [ ] rendering
  - [x] async polling
 
