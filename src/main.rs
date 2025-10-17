@@ -8,11 +8,11 @@ use wayland_client::Connection;
 const STDIN_TOKEN: mio::Token = mio::Token(0);
 const WAYLAND_TOKEN: mio::Token = mio::Token(1);
 
+mod bar;
 mod collector;
+mod draw_state;
 mod parser;
 mod pixels;
-mod bar;
-mod draw_state;
 mod token;
 
 use crate::collector::Collector;

@@ -106,8 +106,11 @@ impl Bar {
         }
 
         let l_start: f32 = 0.;
-        let c_start = (self.pixels.width() as f32 - c.iter().map(|t| t.px_width(&self.font)).sum::<f32>()) / 2.;
-        let r_start = self.pixels.width() as f32 - r.iter().map(|t| t.px_width(&self.font)).sum::<f32>();
+        let c_start = (self.pixels.width() as f32
+            - c.iter().map(|t| t.px_width(&self.font)).sum::<f32>())
+            / 2.;
+        let r_start =
+            self.pixels.width() as f32 - r.iter().map(|t| t.px_width(&self.font)).sum::<f32>();
 
         let assocs = [(l_start, l), (c_start, c), (r_start, r)];
 
