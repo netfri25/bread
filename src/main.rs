@@ -10,6 +10,7 @@ const WAYLAND_TOKEN: mio::Token = mio::Token(1);
 mod collector;
 mod parser;
 mod state;
+mod pixels;
 
 use crate::collector::Collector;
 
@@ -85,6 +86,8 @@ fn main() {
                     for token in parser::parse(line.trim()) {
                         println!("token: {:?}", token);
                     }
+
+                    state.draw_example();
                 }
 
                 WAYLAND_TOKEN => {

@@ -1,5 +1,7 @@
 use std::iter;
 
+use crate::pixels::Color;
+
 pub fn parse<'a>(mut input: &'a str) -> impl Iterator<Item = Token<'a>> {
     iter::from_fn(move || {
         if input.is_empty() {
@@ -49,24 +51,6 @@ pub enum Alignment {
     Left,
     Center,
     Right,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Color {
-    pub a: u8,
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-}
-
-impl Color {
-    pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
-        Self { r, g, b, a }
-    }
-
-    pub fn as_argb(&self) -> [u8; 4] {
-        [self.a, self.r, self.g, self.b]
-    }
 }
 
 fn parse_token<'a>(input: &'a str) -> (Token<'a>, &'a str) {
