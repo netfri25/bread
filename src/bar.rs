@@ -34,7 +34,7 @@ impl Bar {
             layer_shell.get_layer_surface(&surface, None, Layer::Top, "".into(), qhandle, ());
 
         // TODO: make configurable
-        let height = 60;
+        let height = 24;
 
         layer_surface.set_size(0, height);
         layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
@@ -62,7 +62,7 @@ impl Bar {
         pool.destroy();
 
         // TODO: make configurable
-        let scale = PxScale::from(30.);
+        let scale = PxScale::from(24.);
         let font =
             FontVec::try_from_vec(include_bytes!("/usr/share/fonts/TTF/Iosevka-Custom.ttf").into())
                 .unwrap();
