@@ -32,7 +32,14 @@ the only things I had issues with while trying out zelbar is that I wasn't able 
  - [x] input parsing
  - [x] rendering
  - [x] async polling
+ - [ ] mention the other project that is able to provide content, as an example
  - [ ] cli arguments for simple config
+    - [ ] default fg/bg colors
+    - [ ] height
+    - [ ] position (top/bottom)
+    - [ ] font
+    - [ ] font size
+    - [ ] specific monitor (or all monitors by default)
 
 ### Special thanks
 [zelbar](https://sr.ht/~novakane/zelbar/), which inspired this project.
