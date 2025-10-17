@@ -104,8 +104,9 @@ fn main() {
                         unreachable!("too many wayland events")
                     };
 
-                    read_guard.read().unwrap();
-                    event_queue.dispatch_pending(&mut state).unwrap();
+                    if read_guard.read().is_ok() {
+                        event_queue.dispatch_pending(&mut state).unwrap();
+                    }
 
                     let elapsed = start.elapsed();
                     eprintln!("wayland: {:?}", elapsed);
