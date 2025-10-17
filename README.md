@@ -32,6 +32,7 @@ the only things I had issues with while trying out zelbar is that I wasn't able 
  - [x] input parsing
  - [ ] rendering
  - [x] async polling
+ - [ ] cli arguments for simple config
 
 ### Special thanks
 [zelbar](https://sr.ht/~novakane/zelbar/), which inspired this project.
