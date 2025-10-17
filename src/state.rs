@@ -1,9 +1,3 @@
-use std::fs::File;
-use std::io::Seek as _;
-use std::ops::{Deref, DerefMut};
-use std::os::unix::prelude::{AsFd, BorrowedFd};
-
-use memmap::{MmapMut, MmapOptions};
 use wayland_client::protocol::{wl_buffer, wl_compositor, wl_shm, wl_shm_pool, wl_surface};
 use wayland_client::{Connection, Dispatch, Proxy, QueueHandle, delegate_noop};
 use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_shell_v1::{self, Layer};
@@ -124,12 +118,19 @@ impl Dispatch<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1, ()> for State {
         _: &Connection,
         qhandle: &QueueHandle<Self>,
     ) {
-        if let zwlr_layer_surface_v1::Event::Configure { serial, width, height } = event {
+        if let zwlr_layer_surface_v1::Event::Configure {
+            serial,
+            width,
+            height,
+        } = event
+        {
             proxy.ack_configure(serial);
             state.pixels = Pixels::new(width, height);
             let size = state.pixels.size() as i32;
 
-            let pool = state.shm.create_pool(state.pixels.as_fd(), size, qhandle, ());
+            let pool = state
+                .shm
+                .create_pool(state.pixels.as_fd(), size, qhandle, ());
             state.buffer.destroy();
 
             let stride = width * 4;

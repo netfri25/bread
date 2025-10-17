@@ -84,4 +84,3 @@ impl Color {
         [self.b, self.g, self.r, self.a]
     }
 }
-
