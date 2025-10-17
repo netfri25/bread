@@ -20,13 +20,13 @@ pub enum Token<'a> {
     /// %{B:[AA]RRGGBB}
     Bg(Color),
 
-    /// underline
+    /// upwards bar
     /// %{U:WxH}
-    Underline(Size),
+    Upwards(Size),
 
-    /// overline
-    /// %{O:WxH}
-    Overline(Size),
+    /// downwards bar
+    /// %{D:WxH}
+    Downwards(Size),
 }
 
 impl Token<'_> {
@@ -39,8 +39,8 @@ impl Token<'_> {
                 .map(|c| font.h_advance(font.glyph_id(c)))
                 .sum::<f32>() as u32,
 
-            Token::Underline(size) => size.w,
-            Token::Overline(size) => size.w,
+            Token::Upwards(size) => size.w,
+            Token::Downwards(size) => size.w,
             _ => 0,
         }
     }
