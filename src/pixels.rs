@@ -53,8 +53,9 @@ impl Pixels {
         self.file.as_fd()
     }
 
-    pub fn clear(&mut self) {
-        self.mmap.fill(0);
+    pub fn clear(&mut self, color: Color) {
+        let mut bytes = color.as_argb().into_iter().cycle();
+        self.mmap.fill_with(|| bytes.next().unwrap_or_default());
     }
 
     pub fn set(&mut self, x: u32, y: u32, color: Color) -> bool {
@@ -86,5 +87,21 @@ impl Color {
 
     pub fn as_argb(&self) -> [u8; 4] {
         [self.b, self.g, self.r, self.a]
+    }
+
+    pub fn interpolate(self, other: Self, f: f32) -> Self {
+        let f = f.clamp(0., 1.);
+
+        let r = self.r as f32 * (1. - f) + other.r as f32 * f;
+        let g = self.g as f32 * (1. - f) + other.g as f32 * f;
+        let b = self.b as f32 * (1. - f) + other.b as f32 * f;
+        let a = self.a as f32 * (1. - f) + other.a as f32 * f;
+
+        let r = r.round().clamp(0., 255.) as u8;
+        let g = g.round().clamp(0., 255.) as u8;
+        let b = b.round().clamp(0., 255.) as u8;
+        let a = a.round().clamp(0., 255.) as u8;
+
+        Self { r, g, b, a }
     }
 }

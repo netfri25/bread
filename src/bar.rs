@@ -1,4 +1,4 @@
-use ab_glyph::{Font as _, FontVec, PxScale, PxScaleFont, ScaleFont as _, point};
+use ab_glyph::{Font as _, FontVec, PxScale, PxScaleFont};
 use wayland_client::protocol::{wl_buffer, wl_compositor, wl_shm, wl_shm_pool, wl_surface};
 use wayland_client::{Connection, Dispatch, Proxy, QueueHandle, delegate_noop};
 use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_shell_v1::{self, Layer};
@@ -6,11 +6,12 @@ use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_surface_v1::{
     self, Anchor, KeyboardInteractivity,
 };
 
+use crate::draw_state::DrawState;
 use crate::parser::Alignment;
 use crate::pixels::{Color, Pixels};
 use crate::token::Token;
 
-pub struct State {
+pub struct Bar {
     running: bool,
     surface: wl_surface::WlSurface,
     shm: wl_shm::WlShm,
@@ -20,7 +21,7 @@ pub struct State {
 }
 
 // TODO: implement config using cli arguments
-impl State {
+impl Bar {
     pub fn new(
         qhandle: &QueueHandle<Self>,
         compositor: wl_compositor::WlCompositor,
@@ -33,7 +34,7 @@ impl State {
             layer_shell.get_layer_surface(&surface, None, Layer::Top, "".into(), qhandle, ());
 
         // TODO: make configurable
-        let height = 24;
+        let height = 60;
 
         layer_surface.set_size(0, height);
         layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
@@ -61,7 +62,7 @@ impl State {
         pool.destroy();
 
         // TODO: make configurable
-        let scale = PxScale::from(24.);
+        let scale = PxScale::from(30.);
         let font =
             FontVec::try_from_vec(include_bytes!("/usr/share/fonts/TTF/Iosevka-Custom.ttf").into())
                 .unwrap();
@@ -86,13 +87,15 @@ impl State {
     }
 
     pub fn draw_tokens<'a>(&mut self, tokens: impl Iterator<Item = Token<'a>>) {
-        self.pixels.clear();
+        // TODO: use the default bg color
+        self.pixels.clear(Color::new(0, 0, 0, 0xFF));
 
         let mut l = Vec::new();
         let mut c = Vec::new();
         let mut r = Vec::new();
         let mut ptr = &mut l;
 
+        // collect all tokens to their correct section
         for token in tokens {
             match token {
                 Token::Alignment(Alignment::Left) => ptr = &mut l,
@@ -102,63 +105,29 @@ impl State {
             }
         }
 
+        let l_start: f32 = 0.;
+        let c_start = (self.pixels.width() as f32 - c.iter().map(|t| t.px_width(&self.font)).sum::<f32>()) / 2.;
+        let r_start = self.pixels.width() as f32 - r.iter().map(|t| t.px_width(&self.font)).sum::<f32>();
+
+        let assocs = [(l_start, l), (c_start, c), (r_start, r)];
+
+        for (start, tokens) in assocs {
+            let mut draw_state = DrawState::new(&mut self.pixels, &self.font, start);
+
+            for token in tokens {
+                match token {
+                    Token::Text(text) => draw_state.draw_text(text),
+                    Token::Fg(color) => draw_state.set_fg(color),
+                    Token::Bg(color) => draw_state.set_bg(color),
+                    Token::Upwards(size) => draw_state.draw_upwards_bar(size),
+                    Token::Downwards(size) => draw_state.draw_downwards_bar(size),
+                    Token::Alignment(..) => unreachable!("all alignments are already handled"),
+                }
+            }
+        }
+
         // TODO: calculate the starting positions of each section, and draw the content.
         //       implement a method for drawing some token at a given position on pixel buffer.
-
-        for token in l {
-            let Token::Text(text) = token else {
-                continue;
-            };
-
-            let mut start_x = 0.;
-            for c in text.chars() {
-                let mut glyph = self.font.scaled_glyph(c);
-                glyph.position = point(start_x, 0.);
-
-                let h_advance = self.font.h_advance(glyph.id);
-
-                let Some(outline) = self.font.outline_glyph(glyph) else {
-                    start_x += h_advance;
-                    continue;
-                };
-
-                let bounds = outline.px_bounds();
-
-                outline.draw(|x, y, f| {
-                    let x = bounds.min.x as i32 + x as i32;
-                    let y = bounds.min.y as i32 + y as i32 + self.font.ascent() as i32;
-                    if x < 0 || y < 0 {
-                        return;
-                    }
-
-                    let x = x as u32;
-                    let y = y as u32;
-
-                    let f = (255. * f.clamp(0., 1.)).ceil() as u8;
-                    let color = Color::new(f, f, f, 0xFF);
-
-                    self.pixels.set(x, y, color);
-                });
-
-                start_x += h_advance;
-            }
-        }
-
-        self.refresh();
-    }
-
-    pub fn draw_example(&mut self) {
-        let color1 = Color::new(0x4b, 0x48, 0x47, 0xff);
-        let color2 = Color::new(0x4e, 0x78, 0x37, 0xff);
-
-        for y in 0..self.pixels.height() {
-            for x in 0..self.pixels.width() {
-                let sum = x / 50 + y / 50;
-                let is_even = sum.is_multiple_of(2);
-                let color = if is_even { color1 } else { color2 };
-                self.pixels.set(x, y, color);
-            }
-        }
 
         self.refresh();
     }
@@ -172,14 +141,14 @@ impl State {
     }
 }
 
-delegate_noop!(State: ignore wl_compositor::WlCompositor);
-delegate_noop!(State: ignore wl_surface::WlSurface);
-delegate_noop!(State: ignore wl_shm::WlShm);
-delegate_noop!(State: ignore wl_shm_pool::WlShmPool);
-delegate_noop!(State: ignore wl_buffer::WlBuffer);
-delegate_noop!(State: ignore zwlr_layer_shell_v1::ZwlrLayerShellV1);
+delegate_noop!(Bar: ignore wl_compositor::WlCompositor);
+delegate_noop!(Bar: ignore wl_surface::WlSurface);
+delegate_noop!(Bar: ignore wl_shm::WlShm);
+delegate_noop!(Bar: ignore wl_shm_pool::WlShmPool);
+delegate_noop!(Bar: ignore wl_buffer::WlBuffer);
+delegate_noop!(Bar: ignore zwlr_layer_shell_v1::ZwlrLayerShellV1);
 
-impl Dispatch<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1, ()> for State {
+impl Dispatch<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1, ()> for Bar {
     fn event(
         state: &mut Self,
         proxy: &zwlr_layer_surface_v1::ZwlrLayerSurfaceV1,

@@ -30,18 +30,11 @@ pub enum Token<'a> {
 }
 
 impl Token<'_> {
-    pub fn px_width<F: Font>(&self, font: impl AsRef<PxScaleFont<F>>) -> u32 {
-        let font = font.as_ref();
-
+    pub fn px_width<F: Font>(&self, font: &PxScaleFont<F>) -> f32 {
         match self {
-            Token::Text(text) => text
-                .chars()
-                .map(|c| font.h_advance(font.glyph_id(c)))
-                .sum::<f32>() as u32,
-
-            Token::Upwards(size) => size.w,
-            Token::Downwards(size) => size.w,
-            _ => 0,
+            Token::Text(text) => text.chars().map(|c| font.h_advance(font.glyph_id(c))).sum(),
+            Token::Upwards(size) | Token::Downwards(size) => size.w as f32,
+            _ => 0.,
         }
     }
 }

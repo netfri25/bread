@@ -1,4 +1,5 @@
 use std::os::unix::prelude::AsRawFd as _;
+use std::time::Instant;
 
 use mio::Interest;
 use mio::unix::SourceFd;
@@ -10,7 +11,8 @@ const WAYLAND_TOKEN: mio::Token = mio::Token(1);
 mod collector;
 mod parser;
 mod pixels;
-mod state;
+mod bar;
+mod draw_state;
 mod token;
 
 use crate::collector::Collector;
@@ -78,21 +80,24 @@ fn main() {
         for event in events.iter() {
             match event.token() {
                 STDIN_TOKEN => {
+                    let start = Instant::now();
+
                     let mut line = String::new();
                     std::io::stdin().read_line(&mut line).unwrap();
                     if line.is_empty() {
                         state.stop_running()
                     }
 
-                    for token in parser::parse(line.trim()) {
-                        println!("token: {:?}", token);
-                    }
-
                     let tokens = parser::parse(line.trim());
                     state.draw_tokens(tokens);
+
+                    let elapsed = start.elapsed();
+                    eprintln!("input: {:?}", elapsed);
                 }
 
                 WAYLAND_TOKEN => {
+                    let start = Instant::now();
+
                     // since the read guard should be read only once, it's contained inside an
                     // Option so that it can be taken and used only once inside a loop.
                     let Some(read_guard) = read_guard.take() else {
@@ -101,6 +106,9 @@ fn main() {
 
                     read_guard.read().unwrap();
                     event_queue.dispatch_pending(&mut state).unwrap();
+
+                    let elapsed = start.elapsed();
+                    eprintln!("wayland: {:?}", elapsed);
                 }
 
                 token => {

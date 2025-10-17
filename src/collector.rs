@@ -2,7 +2,7 @@ use wayland_client::protocol::{wl_compositor, wl_registry, wl_shm};
 use wayland_client::{Connection, Dispatch, Proxy, QueueHandle};
 use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_shell_v1;
 
-use crate::state::State;
+use crate::bar::Bar;
 
 // TODO: looks similar to builder pattern. maybe automate?
 #[derive(Debug, Default)]
@@ -13,8 +13,8 @@ pub struct Collector {
 }
 
 impl Collector {
-    pub fn collect(self, qhandle: &QueueHandle<State>) -> State {
-        State::new(
+    pub fn collect(self, qhandle: &QueueHandle<Bar>) -> Bar {
+        Bar::new(
             qhandle,
             self.compositor.expect("wl_compositor not found"),
             self.shm.expect("wl_shm not found"),
@@ -23,12 +23,12 @@ impl Collector {
     }
 }
 
-impl Dispatch<wl_registry::WlRegistry, QueueHandle<State>> for Collector {
+impl Dispatch<wl_registry::WlRegistry, QueueHandle<Bar>> for Collector {
     fn event(
         state: &mut Self,
         registry: &wl_registry::WlRegistry,
         event: <wl_registry::WlRegistry as Proxy>::Event,
-        state_qhandle: &QueueHandle<State>,
+        state_qhandle: &QueueHandle<Bar>,
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
