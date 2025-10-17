@@ -13,6 +13,7 @@ use crate::token::Token;
 
 pub struct Bar {
     running: bool,
+    configured: bool,
     surface: wl_surface::WlSurface,
     shm: wl_shm::WlShm,
     buffer: wl_buffer::WlBuffer,
@@ -70,6 +71,7 @@ impl Bar {
 
         Self {
             running: true,
+            configured: false,
             surface,
             shm,
             buffer,
@@ -87,6 +89,11 @@ impl Bar {
     }
 
     pub fn draw_tokens<'a>(&mut self, tokens: impl Iterator<Item = Token<'a>>) {
+        // skip if not configured yet
+        if !self.configured {
+            return;
+        }
+
         // TODO: use the default bg color
         self.pixels.clear(Color::new(0, 0, 0, 0xFF));
 
@@ -185,6 +192,7 @@ impl Dispatch<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1, ()> for Bar {
 
             state.surface.attach(Some(&state.buffer), 0, 0);
             state.surface.commit();
+            state.configured = true;
         }
     }
 }
