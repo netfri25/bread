@@ -1,4 +1,4 @@
-use ab_glyph::{point, Font as _, FontVec, PxScale, PxScaleFont, ScaleFont as _};
+use ab_glyph::{Font as _, FontVec, PxScale, PxScaleFont, ScaleFont as _, point};
 use wayland_client::protocol::{wl_buffer, wl_compositor, wl_shm, wl_shm_pool, wl_surface};
 use wayland_client::{Connection, Dispatch, Proxy, QueueHandle, delegate_noop};
 use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_shell_v1::{self, Layer};
@@ -62,7 +62,9 @@ impl State {
 
         // TODO: make configurable
         let scale = PxScale::from(24.);
-        let font = FontVec::try_from_vec(include_bytes!("/usr/share/fonts/TTF/Iosevka-Custom.ttf").into()).unwrap();
+        let font =
+            FontVec::try_from_vec(include_bytes!("/usr/share/fonts/TTF/Iosevka-Custom.ttf").into())
+                .unwrap();
         let font = font.into_scaled(scale);
 
         Self {
