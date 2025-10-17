@@ -30,7 +30,7 @@ the only things I had issues with while trying out zelbar is that I wasn't able 
 ### TODO
  - [ ] multi monitor rendering
  - [x] input parsing
- - [ ] rendering
+ - [x] rendering
  - [x] async polling
  - [ ] cli arguments for simple config
 

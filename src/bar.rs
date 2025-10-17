@@ -129,9 +129,6 @@ impl Bar {
             }
         }
 
-        // TODO: calculate the starting positions of each section, and draw the content.
-        //       implement a method for drawing some token at a given position on pixel buffer.
-
         self.refresh();
     }
 
