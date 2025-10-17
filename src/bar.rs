@@ -164,35 +164,45 @@ impl Dispatch<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1, ()> for Bar {
         _: &Connection,
         qhandle: &QueueHandle<Self>,
     ) {
-        if let zwlr_layer_surface_v1::Event::Configure {
-            serial,
-            width,
-            height,
-        } = event
-        {
-            proxy.ack_configure(serial);
-            state.pixels = Pixels::new(width, height);
-            let size = state.pixels.size() as i32;
+        match event {
+            zwlr_layer_surface_v1::Event::Closed => {
+                state.configured = false;
+                proxy.destroy();
+                state.buffer.destroy();
+                state.surface.destroy();
+            }
 
-            let pool = state
-                .shm
-                .create_pool(state.pixels.as_fd(), size, qhandle, ());
-            state.buffer.destroy();
+            zwlr_layer_surface_v1::Event::Configure {
+                serial,
+                width,
+                height,
+            } => {
+                proxy.ack_configure(serial);
+                state.pixels = Pixels::new(width, height);
+                let size = state.pixels.size() as i32;
 
-            let stride = width * 4;
-            state.buffer = pool.create_buffer(
-                0,
-                width as i32,
-                height as i32,
-                stride as i32,
-                wl_shm::Format::Argb8888,
-                qhandle,
-                (),
-            );
+                let pool = state
+                    .shm
+                    .create_pool(state.pixels.as_fd(), size, qhandle, ());
+                state.buffer.destroy();
 
-            state.surface.attach(Some(&state.buffer), 0, 0);
-            state.surface.commit();
-            state.configured = true;
+                let stride = width * 4;
+                state.buffer = pool.create_buffer(
+                    0,
+                    width as i32,
+                    height as i32,
+                    stride as i32,
+                    wl_shm::Format::Argb8888,
+                    qhandle,
+                    (),
+                );
+
+                state.surface.attach(Some(&state.buffer), 0, 0);
+                state.surface.commit();
+                state.configured = true;
+            }
+
+            _ => {}
         }
     }
 }
