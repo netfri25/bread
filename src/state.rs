@@ -1,3 +1,4 @@
+use ab_glyph::{point, Font as _, FontVec, PxScale, PxScaleFont, ScaleFont as _};
 use wayland_client::protocol::{wl_buffer, wl_compositor, wl_shm, wl_shm_pool, wl_surface};
 use wayland_client::{Connection, Dispatch, Proxy, QueueHandle, delegate_noop};
 use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_shell_v1::{self, Layer};
@@ -5,8 +6,9 @@ use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_surface_v1::{
     self, Anchor, KeyboardInteractivity,
 };
 
-use crate::parser::Token;
+use crate::parser::Alignment;
 use crate::pixels::{Color, Pixels};
+use crate::token::Token;
 
 pub struct State {
     running: bool,
@@ -14,6 +16,7 @@ pub struct State {
     shm: wl_shm::WlShm,
     buffer: wl_buffer::WlBuffer,
     pixels: Pixels,
+    font: PxScaleFont<FontVec>,
 }
 
 // TODO: implement config using cli arguments
@@ -29,7 +32,9 @@ impl State {
         let layer_surface =
             layer_shell.get_layer_surface(&surface, None, Layer::Top, "".into(), qhandle, ());
 
+        // TODO: make configurable
         let height = 24;
+
         layer_surface.set_size(0, height);
         layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
         layer_surface.set_anchor(Anchor::Left | Anchor::Right | Anchor::Bottom);
@@ -55,12 +60,18 @@ impl State {
 
         pool.destroy();
 
+        // TODO: make configurable
+        let scale = PxScale::from(24.);
+        let font = FontVec::try_from_vec(include_bytes!("/usr/share/fonts/TTF/Iosevka-Custom.ttf").into()).unwrap();
+        let font = font.into_scaled(scale);
+
         Self {
             running: true,
             surface,
             shm,
             buffer,
             pixels,
+            font,
         }
     }
 
@@ -73,7 +84,64 @@ impl State {
     }
 
     pub fn draw_tokens<'a>(&mut self, tokens: impl Iterator<Item = Token<'a>>) {
-        todo!();
+        self.pixels.clear();
+
+        let mut l = Vec::new();
+        let mut c = Vec::new();
+        let mut r = Vec::new();
+        let mut ptr = &mut l;
+
+        for token in tokens {
+            match token {
+                Token::Alignment(Alignment::Left) => ptr = &mut l,
+                Token::Alignment(Alignment::Center) => ptr = &mut c,
+                Token::Alignment(Alignment::Right) => ptr = &mut r,
+                _ => ptr.push(token),
+            }
+        }
+
+        // TODO: calculate the starting positions of each section, and draw the content.
+        //       implement a method for drawing some token at a given position on pixel buffer.
+
+        for token in l {
+            let Token::Text(text) = token else {
+                continue;
+            };
+
+            let mut start_x = 0.;
+            for c in text.chars() {
+                let mut glyph = self.font.scaled_glyph(c);
+                glyph.position = point(start_x, 0.);
+
+                let h_advance = self.font.h_advance(glyph.id);
+
+                let Some(outline) = self.font.outline_glyph(glyph) else {
+                    start_x += h_advance;
+                    continue;
+                };
+
+                let bounds = outline.px_bounds();
+
+                outline.draw(|x, y, f| {
+                    let x = bounds.min.x as i32 + x as i32;
+                    let y = bounds.min.y as i32 + y as i32 + self.font.ascent() as i32;
+                    if x < 0 || y < 0 {
+                        return;
+                    }
+
+                    let x = x as u32;
+                    let y = y as u32;
+
+                    let f = (255. * f.clamp(0., 1.)).ceil() as u8;
+                    let color = Color::new(f, f, f, 0xFF);
+
+                    self.pixels.set(x, y, color);
+                });
+
+                start_x += h_advance;
+            }
+        }
+
         self.refresh();
     }
 

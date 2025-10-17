@@ -1,6 +1,7 @@
 use std::iter;
 
 use crate::pixels::Color;
+use crate::token::Token;
 
 pub fn parse<'a>(mut input: &'a str) -> impl Iterator<Item = Token<'a>> {
     iter::from_fn(move || {
@@ -12,32 +13,6 @@ pub fn parse<'a>(mut input: &'a str) -> impl Iterator<Item = Token<'a>> {
         (token, input) = parse_token(input);
         Some(token)
     })
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Token<'a> {
-    /// simple text
-    Text(&'a str),
-
-    /// change of alignment
-    /// %{l} %{c} %{r}
-    Alignment(Alignment),
-
-    /// change of foreground color
-    /// %{F:[AA]RRGGBB}
-    Fg(Color),
-
-    /// change of background color
-    /// %{B:[AA]RRGGBB}
-    Bg(Color),
-
-    /// underline
-    /// %{U:WxH}
-    Underline(Size),
-
-    /// overline
-    /// %{O:WxH}
-    Overline(Size),
 }
 
 #[derive(Debug, Clone, Copy)]

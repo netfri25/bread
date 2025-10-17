@@ -53,6 +53,10 @@ impl Pixels {
         self.file.as_fd()
     }
 
+    pub fn clear(&mut self) {
+        self.mmap.fill(0);
+    }
+
     pub fn set(&mut self, x: u32, y: u32, color: Color) -> bool {
         if x >= self.width() || y >= self.height() {
             return false;

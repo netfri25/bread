@@ -11,6 +11,7 @@ mod collector;
 mod parser;
 mod pixels;
 mod state;
+mod token;
 
 use crate::collector::Collector;
 
@@ -87,7 +88,8 @@ fn main() {
                         println!("token: {:?}", token);
                     }
 
-                    state.draw_example();
+                    let tokens = parser::parse(line.trim());
+                    state.draw_tokens(tokens);
                 }
 
                 WAYLAND_TOKEN => {
