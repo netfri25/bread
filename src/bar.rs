@@ -140,6 +140,10 @@ impl Dispatch<wl_output::WlOutput, ()> for Bar {
         qhandle: &QueueHandle<Self>,
     ) {
         if let wl_output::Event::Done = event {
+            if let Some(index) = state.outputs.iter().position(|o| &o.output == proxy) {
+                state.outputs.swap_remove(index);
+            }
+
             let output = Output::create(
                 qhandle,
                 &state.compositor,
@@ -173,13 +177,7 @@ impl Dispatch<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1, ()> for Bar {
                 };
 
                 // remove the output
-                let output = state.outputs.swap_remove(index);
-
-                // destroy everything related to that output
-                output.layer_surface.destroy(); // is the same as `proxy`
-                output.wl_surface.destroy();
-                output.buffer.destroy();
-                // implicit `drop(output.pixels)`
+                state.outputs.swap_remove(index);
             }
 
             zwlr_layer_surface_v1::Event::Configure {

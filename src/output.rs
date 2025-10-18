@@ -21,6 +21,7 @@ pub struct Output {
     pub wl_surface: wl_surface::WlSurface,
     pub buffer: wl_buffer::WlBuffer,
     pub pixels: Pixels,
+    pub output: wl_output::WlOutput,
 }
 
 impl Output {
@@ -84,6 +85,7 @@ impl Output {
             wl_surface,
             buffer,
             pixels,
+            output,
         }
     }
 
@@ -128,5 +130,13 @@ impl Output {
         self.wl_surface.attach(Some(&self.buffer), 0, 0);
         self.wl_surface.damage(0, 0, width, height);
         self.wl_surface.commit();
+    }
+}
+
+impl Drop for Output {
+    fn drop(&mut self) {
+        self.layer_surface.destroy();
+        self.wl_surface.destroy();
+        self.buffer.destroy();
     }
 }
