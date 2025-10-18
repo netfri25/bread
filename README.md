@@ -66,7 +66,7 @@ the only things I had issues with while trying out zelbar is that I wasn't able 
 
 ### TODO
  - [x] multi monitor rendering
-    - [ ] test with another monitor
+    - [x] test with another monitor
  - [x] input parsing
  - [x] rendering
  - [x] async polling
