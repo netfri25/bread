@@ -1,6 +1,6 @@
 use std::io;
 use std::os::unix::prelude::AsRawFd as _;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use mio::Interest;
 use mio::unix::SourceFd;
@@ -73,36 +73,44 @@ fn main() {
         for event in events.iter() {
             match event.token() {
                 STDIN_TOKEN => {
-                    let start = Instant::now();
+                    let mut block = || {
+                        let mut line = String::new();
+                        std::io::stdin().read_line(&mut line).unwrap();
+                        if line.is_empty() {
+                            state.stop_running()
+                        }
 
-                    let mut line = String::new();
-                    std::io::stdin().read_line(&mut line).unwrap();
-                    if line.is_empty() {
-                        state.stop_running()
+                        let tokens: Vec<_> = parser::parse(line.trim()).collect();
+                        state.draw_tokens(&tokens);
+                    };
+
+                    if cfg!(feature = "timing") {
+                        let elapsed = time(block);
+                        eprintln!("input:   {:?}", elapsed);
+                    } else {
+                        block();
                     }
-
-                    let tokens: Vec<_> = parser::parse(line.trim()).collect();
-                    state.draw_tokens(&tokens);
-
-                    let elapsed = start.elapsed();
-                    eprintln!("input: {:?}", elapsed);
                 }
 
                 WAYLAND_TOKEN => {
-                    let start = Instant::now();
+                    let mut block = || {
+                        // since the read guard should be read only once, it's contained inside an
+                        // Option so that it can be taken and used only once inside a loop.
+                        let Some(read_guard) = read_guard.take() else {
+                            unreachable!("too many wayland events")
+                        };
 
-                    // since the read guard should be read only once, it's contained inside an
-                    // Option so that it can be taken and used only once inside a loop.
-                    let Some(read_guard) = read_guard.take() else {
-                        unreachable!("too many wayland events")
+                        if read_guard.read().is_ok() {
+                            event_queue.dispatch_pending(&mut state).unwrap();
+                        }
                     };
 
-                    if read_guard.read().is_ok() {
-                        event_queue.dispatch_pending(&mut state).unwrap();
+                    if cfg!(feature = "timing") {
+                        let elapsed = time(block);
+                        eprintln!("wayland: {:?}", elapsed);
+                    } else {
+                        block();
                     }
-
-                    let elapsed = start.elapsed();
-                    eprintln!("wayland: {:?}", elapsed);
                 }
 
                 token => {
@@ -111,6 +119,12 @@ fn main() {
             }
         }
     }
+}
+
+fn time(func: impl FnOnce()) -> Duration {
+    let start = Instant::now();
+    func();
+    start.elapsed()
 }
 
 fn init_bar(conn: &Connection) -> (Bar, EventQueue<Bar>) {
