@@ -140,7 +140,7 @@ impl Dispatch<wl_output::WlOutput, ()> for Bar {
         qhandle: &QueueHandle<Self>,
     ) {
         if let wl_output::Event::Done = event {
-            if let Some(index) = state.outputs.iter().position(|o| &o.output == proxy) {
+            if let Some(index) = state.outputs.iter().position(|o| o.output.id() == proxy.id()) {
                 state.outputs.swap_remove(index);
             }
 
