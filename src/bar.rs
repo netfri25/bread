@@ -1,67 +1,31 @@
 use ab_glyph::{Font as _, FontVec, PxScale, PxScaleFont};
-use wayland_client::protocol::{wl_buffer, wl_compositor, wl_shm, wl_shm_pool, wl_surface};
-use wayland_client::{Connection, Dispatch, Proxy, QueueHandle, delegate_noop};
-use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_shell_v1::{self, Layer};
-use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_surface_v1::{
-    self, Anchor, KeyboardInteractivity,
+use wayland_client::protocol::{
+    wl_buffer, wl_compositor, wl_output, wl_registry, wl_shm, wl_shm_pool, wl_surface,
 };
+use wayland_client::{Connection, Dispatch, Proxy, QueueHandle, delegate_noop};
+use wayland_protocols_wlr::layer_shell::v1::client::{zwlr_layer_shell_v1, zwlr_layer_surface_v1};
 
-use crate::draw_state::DrawState;
+use crate::output::Output;
 use crate::parser::Alignment;
-use crate::pixels::{Color, Pixels};
+use crate::pixels::Pixels;
 use crate::token::Token;
 
 pub struct Bar {
     running: bool,
-    configured: bool,
-    surface: wl_surface::WlSurface,
     shm: wl_shm::WlShm,
-    buffer: wl_buffer::WlBuffer,
-    pixels: Pixels,
+    compositor: wl_compositor::WlCompositor,
+    layer_shell: zwlr_layer_shell_v1::ZwlrLayerShellV1,
     font: PxScaleFont<FontVec>,
+    outputs: Vec<Output>,
 }
 
 // TODO: implement config using cli arguments
 impl Bar {
     pub fn new(
-        qhandle: &QueueHandle<Self>,
         compositor: wl_compositor::WlCompositor,
         shm: wl_shm::WlShm,
         layer_shell: zwlr_layer_shell_v1::ZwlrLayerShellV1,
     ) -> Self {
-        let surface = compositor.create_surface(qhandle, ());
-
-        let layer_surface =
-            layer_shell.get_layer_surface(&surface, None, Layer::Top, "".into(), qhandle, ());
-
-        // TODO: make configurable
-        let height = 24;
-
-        layer_surface.set_size(0, height);
-        layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
-        layer_surface.set_anchor(Anchor::Left | Anchor::Right | Anchor::Bottom);
-        layer_surface.set_exclusive_zone(height as i32);
-        surface.commit();
-
-        let pixels = Pixels::new(1, height);
-        let width = pixels.width() as i32;
-        let stride = pixels.stride() as i32;
-        let height = pixels.height() as i32;
-        let size = pixels.size() as i32;
-
-        let pool = shm.create_pool(pixels.as_fd(), size, qhandle, ());
-        let buffer = pool.create_buffer(
-            0,
-            width,
-            height,
-            stride,
-            wl_shm::Format::Argb8888,
-            qhandle,
-            (),
-        );
-
-        pool.destroy();
-
         // TODO: make configurable
         let scale = PxScale::from(24.);
         let font =
@@ -69,14 +33,15 @@ impl Bar {
                 .unwrap();
         let font = font.into_scaled(scale);
 
+        let outputs = Vec::new();
+
         Self {
             running: true,
-            configured: false,
-            surface,
             shm,
-            buffer,
-            pixels,
             font,
+            compositor,
+            layer_shell,
+            outputs,
         }
     }
 
@@ -88,62 +53,52 @@ impl Bar {
         self.running = false;
     }
 
-    pub fn draw_tokens<'a>(&mut self, tokens: impl Iterator<Item = Token<'a>>) {
-        // skip if not configured yet
-        if !self.configured {
-            return;
-        }
-
-        // TODO: use the default bg color
-        self.pixels.clear(Color::new(0, 0, 0, 0xFF));
-
+    pub fn draw_tokens(&mut self, tokens: &[Token]) {
         let mut l = Vec::new();
         let mut c = Vec::new();
         let mut r = Vec::new();
         let mut ptr = &mut l;
 
-        // collect all tokens to their correct section
-        for token in tokens {
+        // collect all token indices to their correct section
+        for (index, token) in tokens.iter().enumerate() {
             match token {
                 Token::Alignment(Alignment::Left) => ptr = &mut l,
                 Token::Alignment(Alignment::Center) => ptr = &mut c,
                 Token::Alignment(Alignment::Right) => ptr = &mut r,
-                _ => ptr.push(token),
+                _ => ptr.push(index),
             }
         }
 
-        let l_start: f32 = 0.;
-        let c_start = (self.pixels.width() as f32
-            - c.iter().map(|t| t.px_width(&self.font)).sum::<f32>())
-            / 2.;
-        let r_start =
-            self.pixels.width() as f32 - r.iter().map(|t| t.px_width(&self.font)).sum::<f32>();
+        // width of left doesn't matter
+        let l_width: f32 = 0.;
 
-        let assocs = [(l_start, l), (c_start, c), (r_start, r)];
+        let c_width: f32 = c
+            .iter()
+            .map(|&index| tokens[index].px_width(&self.font))
+            .sum();
 
-        for (start, tokens) in assocs {
-            let mut draw_state = DrawState::new(&mut self.pixels, &self.font, start);
+        let r_width: f32 = r
+            .iter()
+            .map(|&index| tokens[index].px_width(&self.font))
+            .sum::<f32>();
 
-            for token in tokens {
-                match token {
-                    Token::Text(text) => draw_state.draw_text(text),
-                    Token::Fg(color) => draw_state.set_fg(color),
-                    Token::Bg(color) => draw_state.set_bg(color),
-                    Token::Ramp(size) => draw_state.draw_ramp(size),
-                    Token::Alignment(..) => unreachable!("all alignments are already handled"),
-                }
-            }
+        // since each output has it's own width, the calculation of the starting pixel had to be
+        // abstracted away.
+        let assocs = [
+            (l_width, 0., l.as_slice()),  // start = (pixels - width) * 0
+            (c_width, 0.5, c.as_slice()), // start = (pixels - width) * 0.5
+            (r_width, 1., r.as_slice()),  // start = (pixels - width) * 1
+        ];
+
+        for output in &mut self.outputs {
+            output.draw(tokens, &assocs, &self.font);
         }
 
         self.refresh();
     }
 
     fn refresh(&mut self) {
-        let width = self.pixels.width() as i32;
-        let height = self.pixels.height() as i32;
-        self.surface.attach(Some(&self.buffer), 0, 0);
-        self.surface.damage(0, 0, width, height);
-        self.surface.commit();
+        self.outputs.iter_mut().for_each(Output::refresh);
     }
 }
 
@@ -153,6 +108,49 @@ delegate_noop!(Bar: ignore wl_shm::WlShm);
 delegate_noop!(Bar: ignore wl_shm_pool::WlShmPool);
 delegate_noop!(Bar: ignore wl_buffer::WlBuffer);
 delegate_noop!(Bar: ignore zwlr_layer_shell_v1::ZwlrLayerShellV1);
+
+impl Dispatch<wl_registry::WlRegistry, ()> for Bar {
+    fn event(
+        _: &mut Self,
+        proxy: &wl_registry::WlRegistry,
+        event: <wl_registry::WlRegistry as Proxy>::Event,
+        _: &(),
+        _: &Connection,
+        qhandle: &QueueHandle<Self>,
+    ) {
+        if let wl_registry::Event::Global {
+            name,
+            interface,
+            version,
+        } = event
+            && interface == "wl_output"
+        {
+            proxy.bind::<wl_output::WlOutput, _, _>(name, version, qhandle, ());
+        }
+    }
+}
+
+impl Dispatch<wl_output::WlOutput, ()> for Bar {
+    fn event(
+        state: &mut Self,
+        proxy: &wl_output::WlOutput,
+        event: <wl_output::WlOutput as Proxy>::Event,
+        _: &(),
+        _: &Connection,
+        qhandle: &QueueHandle<Self>,
+    ) {
+        if let wl_output::Event::Done = event {
+            let output = Output::create(
+                qhandle,
+                &state.compositor,
+                &state.layer_shell,
+                &state.shm,
+                proxy.clone(),
+            );
+            state.outputs.push(output);
+        }
+    }
+}
 
 impl Dispatch<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1, ()> for Bar {
     fn event(
@@ -165,10 +163,23 @@ impl Dispatch<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1, ()> for Bar {
     ) {
         match event {
             zwlr_layer_surface_v1::Event::Closed => {
-                state.configured = false;
-                proxy.destroy();
-                state.buffer.destroy();
-                state.surface.destroy();
+                // find the related output
+                let Some(index) = state
+                    .outputs
+                    .iter()
+                    .position(|o| o.layer_surface.id() == proxy.id())
+                else {
+                    return;
+                };
+
+                // remove the output
+                let output = state.outputs.swap_remove(index);
+
+                // destroy everything related to that output
+                output.layer_surface.destroy(); // is the same as `proxy`
+                output.wl_surface.destroy();
+                output.buffer.destroy();
+                // implicit `drop(output.pixels)`
             }
 
             zwlr_layer_surface_v1::Event::Configure {
@@ -176,17 +187,29 @@ impl Dispatch<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1, ()> for Bar {
                 width,
                 height,
             } => {
+                // find the related output
+                let Some(output) = state
+                    .outputs
+                    .iter_mut()
+                    .find(|o| o.layer_surface.id() == proxy.id())
+                else {
+                    return;
+                };
+
+                // tell the proxy that you acknowledge the config request
                 proxy.ack_configure(serial);
-                state.pixels = Pixels::new(width, height);
-                let size = state.pixels.size() as i32;
+
+                // create new shared memory
+                output.pixels = Pixels::new(width, height);
+                let size = output.pixels.size() as i32;
 
                 let pool = state
                     .shm
-                    .create_pool(state.pixels.as_fd(), size, qhandle, ());
-                state.buffer.destroy();
+                    .create_pool(output.pixels.as_fd(), size, qhandle, ());
+                output.buffer.destroy();
 
                 let stride = width * 4;
-                state.buffer = pool.create_buffer(
+                output.buffer = pool.create_buffer(
                     0,
                     width as i32,
                     height as i32,
@@ -196,9 +219,10 @@ impl Dispatch<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1, ()> for Bar {
                     (),
                 );
 
-                state.surface.attach(Some(&state.buffer), 0, 0);
-                state.surface.commit();
-                state.configured = true;
+                // attach the new buffer to the surface
+                output.wl_surface.attach(Some(&output.buffer), 0, 0);
+                output.wl_surface.commit();
+                output.configured = true;
             }
 
             _ => {}

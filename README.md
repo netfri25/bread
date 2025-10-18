@@ -29,7 +29,8 @@ the bar that made me almost satisfied is [zelbar](https://sr.ht/~novakane/zelbar
 the only things I had issues with while trying out zelbar is that I wasn't able to draw boxes with a defined width and height (which I like for cpu usage), and it crashed if I closed the monitor it was on (which I do from time to time, because I use a laptop).
 
 ### TODO
- - [ ] multi monitor rendering
+ - [x] multi monitor rendering
+    - [ ] test with another monitor
  - [x] input parsing
  - [x] rendering
  - [x] async polling

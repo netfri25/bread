@@ -13,9 +13,8 @@ pub struct Collector {
 }
 
 impl Collector {
-    pub fn collect(self, qhandle: &QueueHandle<Bar>) -> Bar {
+    pub fn collect(self) -> Bar {
         Bar::new(
-            qhandle,
             self.compositor.expect("wl_compositor not found"),
             self.shm.expect("wl_shm not found"),
             self.layer_shell.expect("zwlr_layer_shell_v1 not found"),

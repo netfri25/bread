@@ -14,6 +14,7 @@ mod draw_state;
 mod parser;
 mod pixels;
 mod token;
+mod output;
 
 use crate::collector::Collector;
 
@@ -56,10 +57,14 @@ fn main() {
 
     let mut events = mio::Events::with_capacity(16);
 
-    let mut state = collector.collect(&qhandle);
+    // request the registry for the bar as well, since it needs to keep track of new outputs
+    display.get_registry(&qhandle, ());
+    let mut state = collector.collect();
 
-    // sync with server, to not miss the first input
-    event_queue.roundtrip(&mut state).unwrap();
+    // this seems to be the right amount of dispatches needed to not miss the first input
+    event_queue.blocking_dispatch(&mut state).unwrap();
+    event_queue.blocking_dispatch(&mut state).unwrap();
+    event_queue.blocking_dispatch(&mut state).unwrap();
 
     while state.keep_running() {
         // taken from https://docs.rs/wayland-client/latest/wayland_client/struct.EventQueue.html#integrating-the-event-queue-with-other-sources-of-events
@@ -91,8 +96,8 @@ fn main() {
                         state.stop_running()
                     }
 
-                    let tokens = parser::parse(line.trim());
-                    state.draw_tokens(tokens);
+                    let tokens: Vec<_> = parser::parse(line.trim()).collect();
+                    state.draw_tokens(&tokens);
 
                     let elapsed = start.elapsed();
                     eprintln!("input: {:?}", elapsed);
