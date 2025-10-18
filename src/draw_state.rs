@@ -80,32 +80,16 @@ impl<'pixels, 'font, F: Font> DrawState<'pixels, 'font, F> {
         }
     }
 
-    pub fn draw_upwards_bar(&mut self, size: Size) {
+    pub fn draw_ramp(&mut self, size: Size) {
+        let max_y = self.pixels.height() - size.h - 1;
         for x in 0..size.w {
             let x = self.x.ceil() as u32 + x;
-            for y in 0..size.h {
-                let y = self.pixels.height() - y - 1;
-                self.pixels.set(x, y, self.fg);
-            }
-
-            for y in size.h..self.pixels.height() {
-                let y = self.pixels.height() - y - 1;
+            for y in 0..max_y {
                 self.pixels.set(x, y, self.bg);
             }
-        }
 
-        self.x += size.w as f32;
-    }
-
-    pub fn draw_downwards_bar(&mut self, size: Size) {
-        for x in 0..size.w {
-            let x = self.x.ceil() as u32 + x;
-            for y in 0..size.h {
+            for y in max_y..self.pixels.height() {
                 self.pixels.set(x, y, self.fg);
-            }
-
-            for y in size.h..self.pixels.height() {
-                self.pixels.set(x, y, self.bg);
             }
         }
 

@@ -74,18 +74,11 @@ fn parse_non_text<'a>(mut input: &'a str) -> Option<(Token<'a>, &'a str)> {
             Token::Bg(color)
         }
 
-        'U' => {
+        'R' => {
             input = input.strip_prefix(":")?;
             let size;
             (size, input) = parse_size(input)?;
-            Token::Upwards(size)
-        }
-
-        'D' => {
-            input = input.strip_prefix(":")?;
-            let size;
-            (size, input) = parse_size(input)?;
-            Token::Downwards(size)
+            Token::Ramp(size)
         }
 
         _ => return None,

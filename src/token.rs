@@ -20,20 +20,16 @@ pub enum Token<'a> {
     /// %{B:[AA]RRGGBB}
     Bg(Color),
 
-    /// upwards bar
-    /// %{U:WxH}
-    Upwards(Size),
-
-    /// downwards bar
-    /// %{D:WxH}
-    Downwards(Size),
+    /// ramp
+    /// %{R:WxH}
+    Ramp(Size),
 }
 
 impl Token<'_> {
     pub fn px_width<F: Font>(&self, font: &PxScaleFont<F>) -> f32 {
         match self {
             Token::Text(text) => text.chars().map(|c| font.h_advance(font.glyph_id(c))).sum(),
-            Token::Upwards(size) | Token::Downwards(size) => size.w as f32,
+            Token::Ramp(size) => size.w as f32,
             _ => 0.,
         }
     }

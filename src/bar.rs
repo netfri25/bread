@@ -129,8 +129,7 @@ impl Bar {
                     Token::Text(text) => draw_state.draw_text(text),
                     Token::Fg(color) => draw_state.set_fg(color),
                     Token::Bg(color) => draw_state.set_bg(color),
-                    Token::Upwards(size) => draw_state.draw_upwards_bar(size),
-                    Token::Downwards(size) => draw_state.draw_downwards_bar(size),
+                    Token::Ramp(size) => draw_state.draw_ramp(size),
                     Token::Alignment(..) => unreachable!("all alignments are already handled"),
                 }
             }
