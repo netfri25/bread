@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 ab_glyph = "0.2.32"
+clap = { version = "4.5.49", features = ["derive"] }
+findfont = "0.2.0"
 memmap = "0.7.0"
 mio = { version = "1.0.4", features = ["os-poll", "os-ext"] }
 nonblock = "0.2.0"

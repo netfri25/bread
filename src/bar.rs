@@ -5,6 +5,7 @@ use wayland_client::protocol::{
 use wayland_client::{Connection, Dispatch, Proxy, QueueHandle, delegate_noop};
 use wayland_protocols_wlr::layer_shell::v1::client::{zwlr_layer_shell_v1, zwlr_layer_surface_v1};
 
+use crate::config::Config;
 use crate::output::Output;
 use crate::parser::Section;
 use crate::pixels::Pixels;
@@ -12,6 +13,7 @@ use crate::token::Token;
 
 pub struct Bar {
     running: bool,
+    config: Config,
     shm: wl_shm::WlShm,
     compositor: wl_compositor::WlCompositor,
     layer_shell: zwlr_layer_shell_v1::ZwlrLayerShellV1,
@@ -19,18 +21,16 @@ pub struct Bar {
     outputs: Vec<Output>,
 }
 
-// TODO: implement config using cli arguments
 impl Bar {
     pub fn new(
         compositor: wl_compositor::WlCompositor,
         shm: wl_shm::WlShm,
         layer_shell: zwlr_layer_shell_v1::ZwlrLayerShellV1,
+        config: Config,
     ) -> Self {
-        // TODO: make configurable
-        let scale = PxScale::from(24.);
-        let font =
-            FontVec::try_from_vec(include_bytes!("/usr/share/fonts/TTF/Iosevka-Custom.ttf").into())
-                .unwrap();
+        let scale = PxScale::from(config.font_size as f32);
+        let font_data = std::fs::read(&config.font).unwrap();
+        let font = FontVec::try_from_vec(font_data).unwrap();
         let font = font.into_scaled(scale);
 
         let outputs = Vec::new();
@@ -42,6 +42,7 @@ impl Bar {
             compositor,
             layer_shell,
             outputs,
+            config,
         }
     }
 
@@ -150,6 +151,7 @@ impl Dispatch<wl_output::WlOutput, ()> for Bar {
                 &state.layer_shell,
                 &state.shm,
                 proxy.clone(),
+                &state.config,
             );
             state.outputs.push(output);
         }

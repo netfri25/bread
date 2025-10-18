@@ -3,6 +3,7 @@ use wayland_client::{Connection, Dispatch, Proxy, QueueHandle};
 use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_shell_v1;
 
 use crate::bar::Bar;
+use crate::config::Config;
 
 // TODO: looks similar to builder pattern. maybe automate?
 #[derive(Debug, Default)]
@@ -13,11 +14,12 @@ pub struct Collector {
 }
 
 impl Collector {
-    pub fn collect(self) -> Bar {
+    pub fn collect(self, config: Config) -> Bar {
         Bar::new(
             self.compositor.expect("wl_compositor not found"),
             self.shm.expect("wl_shm not found"),
             self.layer_shell.expect("zwlr_layer_shell_v1 not found"),
+            config,
         )
     }
 }

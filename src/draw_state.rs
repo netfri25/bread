@@ -12,10 +12,13 @@ pub struct DrawState<'pixels, 'font, F: Font> {
 }
 
 impl<'pixels, 'font, F: Font> DrawState<'pixels, 'font, F> {
-    pub fn new(pixels: &'pixels mut Pixels, font: &'font PxScaleFont<F>, start_x: f32) -> Self {
-        // TODO: make these default values configurable
-        let fg = Color::new(0xFF, 0xFF, 0xFF, 0xFF); // white
-        let bg = Color::new(0, 0, 0, 0xFF); // black
+    pub fn new(
+        pixels: &'pixels mut Pixels,
+        font: &'font PxScaleFont<F>,
+        start_x: f32,
+        fg: Color,
+        bg: Color,
+    ) -> Self {
         let x = start_x;
 
         Self {

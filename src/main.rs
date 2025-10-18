@@ -2,6 +2,7 @@ use std::io;
 use std::os::unix::prelude::AsRawFd as _;
 use std::time::{Duration, Instant};
 
+use clap::Parser as _;
 use mio::Interest;
 use mio::unix::SourceFd;
 use wayland_client::{Connection, EventQueue};
@@ -16,11 +17,15 @@ mod output;
 mod parser;
 mod pixels;
 mod token;
+mod config;
 
 use crate::bar::Bar;
 use crate::collector::Collector;
+use crate::config::Config;
 
 fn main() {
+    let config = Config::parse();
+
     // implemented the dispatch using two steps:
     // 1. collect globals from registry (struct Collector)
     // 2. everything else (struct State)
@@ -33,7 +38,7 @@ fn main() {
     let mut reader = nonblock::NonBlockingReader::from_fd(stdin)
         .expect("can't open stdin for non-blocking read");
 
-    let (mut state, mut event_queue) = init_bar(&conn);
+    let (mut state, mut event_queue) = init_bar(&conn, config);
 
     // used for polling efficiently from both stdin and the wayland socket
     let mut poll = mio::Poll::new().expect("unable to create Poll instance");
@@ -139,7 +144,7 @@ fn time(func: impl FnOnce()) -> Duration {
     start.elapsed()
 }
 
-fn init_bar(conn: &Connection) -> (Bar, EventQueue<Bar>) {
+fn init_bar(conn: &Connection, config: Config) -> (Bar, EventQueue<Bar>) {
     let display = conn.display();
 
     // collector event queue
@@ -164,7 +169,7 @@ fn init_bar(conn: &Connection) -> (Bar, EventQueue<Bar>) {
 
     // request the registry for the bar as well, since it needs to keep track of new outputs
     display.get_registry(&qhandle, ());
-    let mut bar = collector.collect();
+    let mut bar = collector.collect(config);
 
     // this seems to be the right amount of dispatches needed to not miss the first input
     // it should let the bar initialize the surfaces and buffers needed

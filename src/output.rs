@@ -9,6 +9,7 @@ use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_surface_v1::{
 };
 use wayland_protocols_wlr::layer_shell::v1::client::{zwlr_layer_shell_v1, zwlr_layer_surface_v1};
 
+use crate::config::Config;
 use crate::draw_state::DrawState;
 use crate::pixels::{Color, Pixels};
 use crate::token::Token;
@@ -22,6 +23,8 @@ pub struct Output {
     pub buffer: wl_buffer::WlBuffer,
     pub pixels: Pixels,
     pub output: wl_output::WlOutput,
+    pub fg: Color,
+    pub bg: Color,
 }
 
 impl Output {
@@ -31,6 +34,7 @@ impl Output {
         layer_shell: &zwlr_layer_shell_v1::ZwlrLayerShellV1,
         shm: &wl_shm::WlShm,
         output: wl_output::WlOutput,
+        config: &Config,
     ) -> Self
     where
         T: 'static,
@@ -51,16 +55,13 @@ impl Output {
             (),
         );
 
-        // TODO: make configurable
-        let height = 24;
-
-        layer_surface.set_size(0, height);
+        layer_surface.set_size(0, config.height);
         layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
         layer_surface.set_anchor(Anchor::Left | Anchor::Right | Anchor::Bottom);
-        layer_surface.set_exclusive_zone(height as i32);
+        layer_surface.set_exclusive_zone(config.height as i32);
         wl_surface.commit();
 
-        let pixels = Pixels::new(1, height);
+        let pixels = Pixels::new(1, config.height);
         let width = pixels.width() as i32;
         let stride = pixels.stride() as i32;
         let height = pixels.height() as i32;
@@ -79,6 +80,9 @@ impl Output {
 
         pool.destroy();
 
+        let fg = config.fg;
+        let bg = config.bg;
+
         Self {
             configured: false,
             layer_surface,
@@ -86,6 +90,8 @@ impl Output {
             buffer,
             pixels,
             output,
+            fg,
+            bg,
         }
     }
 
@@ -106,7 +112,7 @@ impl Output {
         let pixels_width = self.pixels.width() as f32;
         for &(section_width, mult, indices) in assocs {
             let start = (pixels_width - section_width) * mult;
-            let mut draw_state = DrawState::new(&mut self.pixels, font, start);
+            let mut draw_state = DrawState::new(&mut self.pixels, font, start, self.fg, self.bg);
 
             for &index in indices {
                 let token = &tokens[index];

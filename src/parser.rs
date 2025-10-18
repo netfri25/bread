@@ -1,4 +1,5 @@
 use std::iter;
+use std::str::FromStr;
 
 use crate::pixels::Color;
 use crate::token::Token;
@@ -109,15 +110,24 @@ fn parse_color(mut input: &str) -> Option<(Color, &str)> {
     let color_text;
     (color_text, input) = input.split_at(index);
 
-    let value = u32::from_str_radix(color_text, 16).ok()?;
-    let [a, r, g, b] = value.to_be_bytes();
-    let mut color = Color::new(r, g, b, a);
-
-    match color_text.len() {
-        6 => color.a = 0xFF,
-        8 => {}
-        _ => return None,
-    }
-
+    let color = color_text.parse().ok()?;
     Some((color, input))
+}
+
+impl FromStr for Color {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let value = u32::from_str_radix(s, 16).map_err(drop)?;
+        let [a, r, g, b] = value.to_be_bytes();
+        let mut color = Color::new(r, g, b, a);
+
+        match s.len() {
+            6 => color.a = 0xFF,
+            8 => {},
+            _ => return Err(()),
+        }
+
+        Ok(color)
+    }
 }
