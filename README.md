@@ -1,5 +1,5 @@
 # Bread
-simple, non-interactlable, controlled from stdin, wayland status bar.
+simple, easily composable, non-interactlable, controlled from stdin, wayland status bar.
 
 "a bar that reads" (b read).
 
