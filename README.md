@@ -9,6 +9,7 @@ simple, easily composable, non-interactlable, controlled from stdin, wayland sta
  - single threaded (by design)
  - efficient polling system
  - works on multiple monitors (and doesn't crash when monitor disconnects)
+ - for [wlroots compositors](https://github.com/solarkraft/awesome-wlroots?tab=readme-ov-file#compositors)
 
 ### Build Dependencies
  - [Rust](https://rust-lang.org)
