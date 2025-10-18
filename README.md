@@ -3,6 +3,8 @@ simple, easily composable, non-interactlable, controlled from stdin, wayland sta
 
 "a bar that reads" (b read).
 
+<img src='assets/showcase.png'>
+
 ### Specifications
  - non-interactable (by design)
  - controlled from stdin with simple but powerful attributes
