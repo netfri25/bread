@@ -31,6 +31,7 @@ dependencies = [
  "ab_glyph",
  "memmap",
  "mio",
+ "nonblock",
  "tempfile",
  "wayland-client",
  "wayland-protocols",
@@ -137,6 +138,15 @@ dependencies = [
  "log",
  "wasi",
  "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "nonblock"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51c7a4f22e5f2e2bd805d6ab56f1ae87eb1815673e1b452048896fb687a8a3d4"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

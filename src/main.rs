@@ -27,20 +27,27 @@ fn main() {
     // this is a bit similar to the [builder pattern](https://rust-unofficial.github.io/patterns/patterns/creational/builder.html)
     let conn = Connection::connect_to_env().unwrap();
 
+    // create a non blocking stdin reader
+    let stdin = std::io::stdin();
+    let stdin_fd = stdin.as_raw_fd();
+    let mut reader = nonblock::NonBlockingReader::from_fd(stdin)
+        .expect("can't open stdin for non-blocking read");
+
     let (mut state, mut event_queue) = init_bar(&conn);
 
     // used for polling efficiently from both stdin and the wayland socket
     let mut poll = mio::Poll::new().expect("unable to create Poll instance");
 
     // register stdin for polling
-    let stdin_fd = std::io::stdin().as_raw_fd();
+    let mut stdin_source = SourceFd(&stdin_fd);
     poll.registry()
-        .register(&mut SourceFd(&stdin_fd), STDIN_TOKEN, Interest::READABLE)
+        .register(&mut stdin_source, STDIN_TOKEN, Interest::READABLE)
         .expect("unable to register stdin");
 
     // the events collected by polling
     let mut events = mio::Events::with_capacity(16);
 
+    let mut buf = Vec::new();
     while state.keep_running() {
         // taken from https://docs.rs/wayland-client/latest/wayland_client/struct.EventQueue.html#integrating-the-event-queue-with-other-sources-of-events
         event_queue.flush().unwrap();
@@ -74,8 +81,13 @@ fn main() {
             match event.token() {
                 STDIN_TOKEN => {
                     let mut block = || {
-                        let mut line = String::new();
-                        std::io::stdin().read_line(&mut line).unwrap();
+                        buf.clear();
+                        reader.read_available(&mut buf).unwrap();
+
+                        // NOTE: the user should always be providing utf8 valid text
+                        let input = unsafe { str::from_utf8_unchecked(&buf) };
+                        let line = input.lines().last().unwrap_or_default();
+
                         if line.is_empty() {
                             state.stop_running()
                         }
