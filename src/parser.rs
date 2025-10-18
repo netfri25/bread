@@ -103,16 +103,21 @@ fn parse_size(mut input: &str) -> Option<(Size, &str)> {
     Some((size, input))
 }
 
-fn parse_color(input: &str) -> Option<(Color, &str)> {
-    parse_color_with_len(input, 8).or_else(|| parse_color_with_len(input, 6))
-}
+fn parse_color(mut input: &str) -> Option<(Color, &str)> {
+    let index = input.find('}')?;
 
-fn parse_color_with_len(mut input: &str, len: usize) -> Option<(Color, &str)> {
     let color_text;
-    (color_text, input) = input.split_at_checked(len)?;
+    (color_text, input) = input.split_at(index);
 
     let value = u32::from_str_radix(color_text, 16).ok()?;
     let [a, r, g, b] = value.to_be_bytes();
-    let color = Color::new(r, g, b, a);
+    let mut color = Color::new(r, g, b, a);
+
+    match color_text.len() {
+        6 => color.a = 0xFF,
+        8 => {}
+        _ => return None,
+    }
+
     Some((color, input))
 }
