@@ -28,7 +28,7 @@ cargo install --git https://github.com/netfri25/bread
 
 #### Usage
 ```shell
-my-script | bread
+my-script | bread --font "Iosevka-Custom"
 ```
 where `my-script` is your own script, that generates content for `bread` to display
 
@@ -74,11 +74,11 @@ the only things I had issues with while trying out zelbar is that I wasn't able 
  - [x] async polling
  - [x] mention the other project that is able to provide content, as an example
  - [ ] cli arguments for simple config
-    - [ ] default fg/bg colors
-    - [ ] height
-    - [ ] position (top/bottom)
-    - [ ] font
-    - [ ] font size
+    - [x] default fg/bg colors
+    - [x] height
+    - [x] position (top/bottom)
+    - [x] font
+    - [x] font size
     - [ ] specific monitor (or all monitors by default)
  - [ ] write a manpage
 
