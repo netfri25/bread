@@ -1,6 +1,6 @@
 use ab_glyph::{Font, PxScaleFont, ScaleFont as _};
 
-use crate::parser::{Alignment, Size};
+use crate::parser::{Section, Size};
 use crate::pixels::Color;
 
 #[derive(Debug, Clone, Copy)]
@@ -8,9 +8,9 @@ pub enum Token<'a> {
     /// simple text
     Text(&'a str),
 
-    /// change of alignment
+    /// change of section
     /// %{l} %{c} %{r}
-    Alignment(Alignment),
+    Section(Section),
 
     /// change of foreground color
     /// %{F:[AA]RRGGBB}

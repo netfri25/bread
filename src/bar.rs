@@ -6,7 +6,7 @@ use wayland_client::{Connection, Dispatch, Proxy, QueueHandle, delegate_noop};
 use wayland_protocols_wlr::layer_shell::v1::client::{zwlr_layer_shell_v1, zwlr_layer_surface_v1};
 
 use crate::output::Output;
-use crate::parser::Alignment;
+use crate::parser::Section;
 use crate::pixels::Pixels;
 use crate::token::Token;
 
@@ -62,9 +62,9 @@ impl Bar {
         // collect all token indices to their correct section
         for (index, token) in tokens.iter().enumerate() {
             match token {
-                Token::Alignment(Alignment::Left) => ptr = &mut l,
-                Token::Alignment(Alignment::Center) => ptr = &mut c,
-                Token::Alignment(Alignment::Right) => ptr = &mut r,
+                Token::Section(Section::Left) => ptr = &mut l,
+                Token::Section(Section::Center) => ptr = &mut c,
+                Token::Section(Section::Right) => ptr = &mut r,
                 _ => ptr.push(index),
             }
         }

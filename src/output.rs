@@ -113,7 +113,7 @@ impl Output {
                     Token::Fg(color) => draw_state.set_fg(*color),
                     Token::Bg(color) => draw_state.set_bg(*color),
                     Token::Ramp(size) => draw_state.draw_ramp(*size),
-                    Token::Alignment(..) => unreachable!("all alignments are already handled"),
+                    Token::Section(..) => unreachable!("all sections are already handled"),
                 }
             }
         }

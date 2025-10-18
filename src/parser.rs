@@ -22,7 +22,7 @@ pub struct Size {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Alignment {
+pub enum Section {
     Left,
     Center,
     Right,
@@ -56,9 +56,9 @@ fn parse_non_text<'a>(mut input: &'a str) -> Option<(Token<'a>, &'a str)> {
     input = chars.as_str();
 
     let token = match c {
-        'l' => Token::Alignment(Alignment::Left),
-        'c' => Token::Alignment(Alignment::Center),
-        'r' => Token::Alignment(Alignment::Right),
+        'l' => Token::Section(Section::Left),
+        'c' => Token::Section(Section::Center),
+        'r' => Token::Section(Section::Right),
 
         'F' => {
             input = input.strip_prefix(":")?;
