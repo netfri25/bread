@@ -58,6 +58,9 @@ fn main() {
 
     let mut state = collector.collect(&qhandle);
 
+    // sync with server, to not miss the first input
+    event_queue.roundtrip(&mut state).unwrap();
+
     while state.keep_running() {
         // taken from https://docs.rs/wayland-client/latest/wayland_client/struct.EventQueue.html#integrating-the-event-queue-with-other-sources-of-events
         event_queue.flush().unwrap();
