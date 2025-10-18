@@ -11,10 +11,10 @@ const WAYLAND_TOKEN: mio::Token = mio::Token(1);
 mod bar;
 mod collector;
 mod draw_state;
+mod output;
 mod parser;
 mod pixels;
 mod token;
-mod output;
 
 use crate::collector::Collector;
 

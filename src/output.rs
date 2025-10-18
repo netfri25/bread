@@ -1,14 +1,17 @@
 use ab_glyph::{Font, PxScaleFont};
-use wayland_client::protocol::{wl_buffer, wl_compositor, wl_output, wl_shm, wl_shm_pool, wl_surface};
+use wayland_client::protocol::{
+    wl_buffer, wl_compositor, wl_output, wl_shm, wl_shm_pool, wl_surface,
+};
 use wayland_client::{Dispatch, QueueHandle};
 use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_shell_v1::Layer;
-use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_surface_v1::{Anchor, KeyboardInteractivity};
+use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_surface_v1::{
+    Anchor, KeyboardInteractivity,
+};
 use wayland_protocols_wlr::layer_shell::v1::client::{zwlr_layer_shell_v1, zwlr_layer_surface_v1};
 
 use crate::draw_state::DrawState;
 use crate::pixels::{Color, Pixels};
 use crate::token::Token;
-
 
 // each wl_output needs it's own zwlr_layer_surface and wl_surface
 // buffer can't shared between all surfaces, since some may have a different size
@@ -84,7 +87,12 @@ impl Output {
         }
     }
 
-    pub fn draw(&mut self, tokens: &[Token], assocs: &[(f32, f32, &[usize]); 3], font: &PxScaleFont<impl Font>) {
+    pub fn draw(
+        &mut self,
+        tokens: &[Token],
+        assocs: &[(f32, f32, &[usize]); 3],
+        font: &PxScaleFont<impl Font>,
+    ) {
         // do not draw if not configured
         if !self.configured {
             return;
@@ -92,7 +100,6 @@ impl Output {
 
         // TODO: use the default bg color
         self.pixels.clear(Color::new(0, 0, 0, 0xFF));
-
 
         let pixels_width = self.pixels.width() as f32;
         for &(section_width, mult, indices) in assocs {
@@ -123,4 +130,3 @@ impl Output {
         self.wl_surface.commit();
     }
 }
-
