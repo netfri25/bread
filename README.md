@@ -11,7 +11,8 @@ simple, non-interactlable, controlled from stdin, wayland status bar.
 
 ### build dependencies
  - [rust](https://rust-lang.org)
-(doesn't need wayland development packages)
+> [!NOTE]
+> doesn't need wayland development packages
 
 ### Getting started
 TBD
