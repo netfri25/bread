@@ -68,28 +68,31 @@ fn main() {
     // the events collected by polling
     let mut events = mio::Events::with_capacity(16);
 
+    // get the wayland socket fd
+    let wayland_fd = {
+        let read_guard = event_queue.prepare_read().unwrap();
+        read_guard.connection_fd().as_raw_fd()
+    };
+
+    // register the wayland socket
+    poll.registry()
+        .register(&mut SourceFd(&wayland_fd), WAYLAND_TOKEN, Interest::READABLE)
+        .unwrap();
+
     let mut buf = Vec::new();
     while state.keep_running() {
         // taken from https://docs.rs/wayland-client/latest/wayland_client/struct.EventQueue.html#integrating-the-event-queue-with-other-sources-of-events
         event_queue.flush().unwrap();
         event_queue.dispatch_pending(&mut state).unwrap();
 
-        // register the current wayland socket (`read_guard.connection_fd()` might return a different FD)
+        // wayland read guard
         let read_guard = event_queue.prepare_read().unwrap();
-        let wayland_fd = read_guard.connection_fd().as_raw_fd();
-        let mut wayland_source = SourceFd(&wayland_fd);
-        poll.registry()
-            .register(&mut wayland_source, WAYLAND_TOKEN, Interest::READABLE)
-            .unwrap();
 
+        // converted to Option so that it can be taken once without ownership
         let mut read_guard = Some(read_guard);
 
         // poll both the wayland socket and stdin
         let res = poll.poll(&mut events, None);
-
-        // remove the wayland socket, since it might change
-        // will be added again in the next iteration
-        poll.registry().deregister(&mut wayland_source).unwrap();
 
         match res {
             Ok(_) => {}
