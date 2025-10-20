@@ -240,6 +240,9 @@ impl Dispatch<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1, ()> for Bar {
                 output.pixels = Pixels::new(width, height);
                 let size = output.pixels.size() as i32;
 
+                // make sure everything is initialized to bg color instead of transparent
+                output.pixels.clear(output.bg);
+
                 let pool = state
                     .shm
                     .create_pool(output.pixels.as_fd(), size, qhandle, ());

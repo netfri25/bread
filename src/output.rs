@@ -108,9 +108,8 @@ impl Output {
             return;
         }
 
-        // TODO: use the default bg color
         bench!(format!("clear {}", self.output.id()), {
-            self.pixels.clear(Color::new(0, 0, 0, 0xFF));
+            self.pixels.clear(self.bg);
         });
 
         bench!(format!("render {}", self.output.id()), {
@@ -132,6 +131,7 @@ impl Output {
         });
     }
 
+    // uses the sections to know which parts to damage
     pub fn refresh(&mut self, sections: &[SectionInfo; 3]) {
         if !self.configured {
             return;

@@ -39,8 +39,6 @@ macro_rules! bench {
     }}
 }
 
-// TODO: first one should damage the entire buffer
-
 fn main() {
     let config = Config::parse();
 
