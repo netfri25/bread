@@ -2,17 +2,19 @@ use ab_glyph::{Font, PxScaleFont};
 use wayland_client::protocol::{
     wl_buffer, wl_compositor, wl_output, wl_shm, wl_shm_pool, wl_surface,
 };
-use wayland_client::{Dispatch, QueueHandle};
+use wayland_client::{Dispatch, Proxy as _, QueueHandle};
 use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_shell_v1::Layer;
 use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_surface_v1::{
     Anchor, KeyboardInteractivity,
 };
 use wayland_protocols_wlr::layer_shell::v1::client::{zwlr_layer_shell_v1, zwlr_layer_surface_v1};
 
+use crate::bar::SectionInfo;
 use crate::config::Config;
 use crate::draw_state::DrawState;
 use crate::pixels::{Color, Pixels};
 use crate::token::Token;
+use crate::bench;
 
 // each wl_output needs it's own zwlr_layer_surface and wl_surface
 // buffer can't shared between all surfaces, since some may have a different size
@@ -98,7 +100,7 @@ impl Output {
     pub fn draw(
         &mut self,
         tokens: &[Token],
-        assocs: &[(f32, f32, &[usize]); 3],
+        sections: &[SectionInfo; 3],
         font: &PxScaleFont<impl Font>,
     ) {
         // do not draw if not configured
@@ -107,34 +109,43 @@ impl Output {
         }
 
         // TODO: use the default bg color
-        self.pixels.clear(Color::new(0, 0, 0, 0xFF));
+        bench!(format!("clear {}", self.output.id()), {
+            self.pixels.clear(Color::new(0, 0, 0, 0xFF));
+        });
 
-        let pixels_width = self.pixels.width() as f32;
-        for &(section_width, mult, indices) in assocs {
-            let start = (pixels_width - section_width) * mult;
-            let mut draw_state = DrawState::new(&mut self.pixels, font, start, self.fg, self.bg);
+        bench!(format!("render {}", self.output.id()), {
+            let pixels_width = self.pixels.width() as f32;
+            for section in sections {
+                let start = (pixels_width - section.width) * section.mult;
+                let mut draw_state = DrawState::new(&mut self.pixels, font, start, self.fg, self.bg);
 
-            for &index in indices {
-                let token = &tokens[index];
-                match token {
-                    Token::Text(text) => draw_state.draw_text(text),
-                    Token::Fg(color) => draw_state.set_fg(*color),
-                    Token::Bg(color) => draw_state.set_bg(*color),
-                    Token::Ramp(size) => draw_state.draw_ramp(*size),
-                    Token::Section(..) => unreachable!("all sections are already handled"),
+                for &index in section.indices { let token = &tokens[index];
+                    match token {
+                        Token::Text(text) => draw_state.draw_text(text),
+                        Token::Fg(color) => draw_state.set_fg(*color),
+                        Token::Bg(color) => draw_state.set_bg(*color),
+                        Token::Ramp(size) => draw_state.draw_ramp(*size),
+                        Token::Section(..) => unreachable!("all sections are already handled"),
+                    }
                 }
             }
-        }
+        });
     }
 
-    pub fn refresh(&mut self) {
+    pub fn refresh(&mut self, sections: &[SectionInfo; 3]) {
         if !self.configured {
             return;
         }
-        let width = self.pixels.width() as i32;
-        let height = self.pixels.height() as i32;
+
         self.wl_surface.attach(Some(&self.buffer), 0, 0);
-        self.wl_surface.damage(0, 0, width, height);
+
+        let height = self.pixels.height() as i32;
+        let pixels_width = self.pixels.width() as f32;
+        for section in sections {
+            let start_x = (pixels_width - section.width) * section.mult;
+            self.wl_surface.damage(start_x as i32, 0, section.width as i32, height);
+        }
+
         self.wl_surface.commit();
     }
 }

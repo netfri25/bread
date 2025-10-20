@@ -5,11 +5,18 @@ use wayland_client::protocol::{
 use wayland_client::{Connection, Dispatch, Proxy, QueueHandle, delegate_noop};
 use wayland_protocols_wlr::layer_shell::v1::client::{zwlr_layer_shell_v1, zwlr_layer_surface_v1};
 
+use crate::bench;
 use crate::config::Config;
 use crate::output::Output;
 use crate::parser::Section;
 use crate::pixels::Pixels;
 use crate::token::Token;
+
+pub struct SectionInfo<'a> {
+    pub width: f32,
+    pub mult: f32,
+    pub indices: &'a [usize]
+}
 
 pub struct Bar {
     running: bool,
@@ -19,6 +26,7 @@ pub struct Bar {
     layer_shell: zwlr_layer_shell_v1::ZwlrLayerShellV1,
     font: PxScaleFont<FontVec>,
     outputs: Vec<Output>,
+    prev_widths: [f32; 3],
 }
 
 impl Bar {
@@ -43,6 +51,7 @@ impl Bar {
             layer_shell,
             outputs,
             config,
+            prev_widths: Default::default(),
         }
     }
 
@@ -70,8 +79,11 @@ impl Bar {
             }
         }
 
-        // width of left doesn't matter
-        let l_width: f32 = 0.;
+        // width of left is used for damage
+        let l_width: f32 = l
+            .iter()
+            .map(|&index| tokens[index].px_width(&self.font))
+            .sum();
 
         let c_width: f32 = c
             .iter()
@@ -85,21 +97,46 @@ impl Bar {
 
         // since each output has it's own width, the calculation of the starting pixel had to be
         // abstracted away.
-        let assocs = [
-            (l_width, 0., l.as_slice()),  // start = (pixels - width) * 0
-            (c_width, 0.5, c.as_slice()), // start = (pixels - width) * 0.5
-            (r_width, 1., r.as_slice()),  // start = (pixels - width) * 1
-        ];
+        let l_section = SectionInfo {
+            width: l_width,
+            mult: 0.,   // start = (pixels - width) * 0
+            indices: l.as_slice(),
+        };
 
-        for output in &mut self.outputs {
-            output.draw(tokens, &assocs, &self.font);
-        }
+        let c_section = SectionInfo {
+            width: c_width,
+            mult: 0.5,  // start = (pixels - width) * 0.5
+            indices: c.as_slice(),
+        };
 
-        self.refresh();
+        let r_section = SectionInfo {
+            width: r_width,
+            mult: 1.,   // start = (pixels - width) * 1
+            indices: r.as_slice(),
+        };
+
+
+        let sections = [l_section, c_section, r_section];
+
+        bench!("render", {
+            for output in &mut self.outputs {
+                output.draw(tokens, &sections, &self.font);
+            }
+        });
+
+        bench!("refresh", self.refresh(sections));
     }
 
-    fn refresh(&mut self) {
-        self.outputs.iter_mut().for_each(Output::refresh);
+    fn refresh(&mut self, mut sections: [SectionInfo; 3]) {
+        let new_widths = sections.each_ref().map(|s| s.width);
+        let widths: [_; 3] = std::array::from_fn(|i| new_widths[i].max(self.prev_widths[i]));
+
+        for (section, width) in sections.iter_mut().zip(widths) {
+            section.width = width;
+        }
+
+        self.outputs.iter_mut().for_each(|o| o.refresh(&sections));
+        self.prev_widths = new_widths;
     }
 }
 
