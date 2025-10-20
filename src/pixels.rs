@@ -1,14 +1,13 @@
-use std::fs::File;
 use std::os::unix::prelude::{AsFd as _, BorrowedFd};
 
-use memmap::{MmapMut, MmapOptions};
+use memfd::{Memfd, MemfdOptions};
+use memmap2::{Advice, MmapMut, MmapOptions};
 
 // in the ARGB format
 pub struct Pixels {
-    file: File,
+    mfd: Memfd,
     mmap: MmapMut,
     width: u32,
-    height: u32,
 }
 
 impl Pixels {
@@ -16,33 +15,42 @@ impl Pixels {
         let stride = width as usize * 4;
         let len = stride * height as usize;
 
-        // create a new file in the specified size and fill with 0s.
-        // this will create an empty transparent buffer, which is fine since the first draw doesn't
-        // really matter that much
-        let file = tempfile::tempfile().expect("tmp file is mandatory");
-        file.set_len(len as u64).expect("set len failed");
+        let mfd = MemfdOptions::new()
+            .allow_sealing(true)
+            .create("pixels")
+            .expect("memfd create");
+
+        mfd.as_file().set_len(len as u64).expect("set len");
 
         // nothing to worry about :)
-        let mmap = unsafe { MmapOptions::new().len(len).map_mut(&file).unwrap() };
+        let mmap = unsafe {
+            MmapOptions::new()
+                .len(len)
+                .no_reserve_swap()
+                .populate()
+                .map_mut(mfd.as_file())
+                .expect("mmap")
+        };
+
+        mmap.advise(Advice::Random).expect("advice");
 
         Self {
-            file,
+            mfd,
             mmap,
-            width,
-            height,
+            width
         }
     }
 
-    pub fn width(&self) -> u32 {
+    pub const fn width(&self) -> u32 {
         self.width
     }
 
-    pub fn stride(&self) -> u32 {
+    pub const fn stride(&self) -> u32 {
         self.width() * 4
     }
 
     pub fn height(&self) -> u32 {
-        self.height
+        self.mmap.len() as u32 / self.stride()
     }
 
     pub fn size(&self) -> u32 {
@@ -50,7 +58,7 @@ impl Pixels {
     }
 
     pub fn as_fd(&self) -> BorrowedFd<'_> {
-        self.file.as_fd()
+        self.mfd.as_file().as_fd()
     }
 
     pub fn clear(&mut self, color: Color) {

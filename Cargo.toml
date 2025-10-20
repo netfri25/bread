@@ -7,10 +7,10 @@ edition = "2024"
 ab_glyph = "0.2.32"
 clap = { version = "4.5.49", features = ["derive"] }
 findfont = "0.2.0"
-memmap = "0.7.0"
+memfd = "0.6.5"
+memmap2 = "0.9.8"
 mio = { version = "1.0.4", features = ["os-poll", "os-ext"] }
 nonblock = "0.2.0"
-tempfile = "3.23.0"
 wayland-client = { version = "0.31.11", default-features = false }
 wayland-protocols = { version = "0.32.9", features = ["client"] }
 wayland-protocols-wlr = { version = "0.3.9", features = ["client"] }
