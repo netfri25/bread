@@ -1,6 +1,5 @@
 use std::io;
 use std::os::unix::prelude::AsRawFd as _;
-use std::time::{Duration, Instant};
 
 use clap::Parser as _;
 use mio::Interest;
@@ -22,6 +21,25 @@ mod config;
 use crate::bar::Bar;
 use crate::collector::Collector;
 use crate::config::Config;
+
+#[macro_export]
+macro_rules! bench {
+    ($name:expr, $block:expr) => {{
+        if cfg!(feature = "timing") {
+            let name = $name;
+            eprintln!("START: {} started", name);
+            let start = ::std::time::Instant::now();
+            let res = $block;
+            let elapsed = start.elapsed();
+            eprintln!("FINISH: {} took {:?}", name, elapsed);
+            res
+        } else {
+            $block
+        }
+    }}
+}
+
+// TODO: first one should damage the entire buffer
 
 fn main() {
     let config = Config::parse();
@@ -85,32 +103,25 @@ fn main() {
         for event in events.iter() {
             match event.token() {
                 STDIN_TOKEN => {
-                    let mut block = || {
-                        buf.clear();
-                        reader.read_available(&mut buf).unwrap();
+                    buf.clear();
+                    reader.read_available(&mut buf).unwrap();
 
-                        // NOTE: the user should always be providing utf8 valid text
-                        let input = unsafe { str::from_utf8_unchecked(&buf) };
-                        let line = input.lines().last().unwrap_or_default();
+                    // NOTE: the user should always be providing utf8 valid text
+                    let input = unsafe { str::from_utf8_unchecked(&buf) };
 
-                        if line.is_empty() {
-                            state.stop_running()
-                        }
+                    let line = input.lines().last().unwrap_or_default();
 
-                        let tokens: Vec<_> = parser::parse(line.trim()).collect();
-                        state.draw_tokens(&tokens);
-                    };
-
-                    if cfg!(feature = "timing") {
-                        let elapsed = time(block);
-                        eprintln!("input:   {:?}", elapsed);
-                    } else {
-                        block();
+                    if line.is_empty() {
+                        state.stop_running()
                     }
+
+                    let tokens: Vec<_> = bench!("parsing", parser::parse(line.trim()).collect());
+
+                    bench!("draw", state.draw_tokens(&tokens));
                 }
 
                 WAYLAND_TOKEN => {
-                    let mut block = || {
+                    bench!("wayland", {
                         // since the read guard should be read only once, it's contained inside an
                         // Option so that it can be taken and used only once inside a loop.
                         let Some(read_guard) = read_guard.take() else {
@@ -120,14 +131,7 @@ fn main() {
                         if read_guard.read().is_ok() {
                             event_queue.dispatch_pending(&mut state).unwrap();
                         }
-                    };
-
-                    if cfg!(feature = "timing") {
-                        let elapsed = time(block);
-                        eprintln!("wayland: {:?}", elapsed);
-                    } else {
-                        block();
-                    }
+                    });
                 }
 
                 token => {
@@ -136,12 +140,6 @@ fn main() {
             }
         }
     }
-}
-
-fn time(func: impl FnOnce()) -> Duration {
-    let start = Instant::now();
-    func();
-    start.elapsed()
 }
 
 fn init_bar(conn: &Connection, config: Config) -> (Bar, EventQueue<Bar>) {
