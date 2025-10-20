@@ -51,7 +51,7 @@ impl<'pixels, 'font, F: Font> DrawState<'pixels, 'font, F> {
             // fill background
             for off_x in 0..h_advance.ceil() as u32 {
                 for y in 0..self.pixels.height() {
-                    let x = self.x.floor() as u32 + off_x;
+                    let x = self.x as u32 + off_x;
                     self.pixels.set(x, y, self.bg);
                 }
             }
