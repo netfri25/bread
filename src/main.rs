@@ -84,7 +84,7 @@ fn main() {
         .unwrap();
 
     let mut buf = Vec::new();
-    while state.keep_running() {
+    while state.is_running() {
         // taken from https://docs.rs/wayland-client/latest/wayland_client/struct.EventQueue.html#integrating-the-event-queue-with-other-sources-of-events
         event_queue.flush().unwrap();
         event_queue.dispatch_pending(&mut state).unwrap();
@@ -167,7 +167,7 @@ fn init_bar(conn: &Connection, config: Config) -> (Bar, EventQueue<Bar>) {
     // send the request, and react to events. this should collect all of the needed globals
     let mut collector = Collector::default();
     collector_event_queue
-        .blocking_dispatch(&mut collector)
+        .roundtrip(&mut collector)
         .unwrap();
 
     // request the registry for the bar as well, since it needs to keep track of new outputs
@@ -176,8 +176,8 @@ fn init_bar(conn: &Connection, config: Config) -> (Bar, EventQueue<Bar>) {
 
     // this seems to be the right amount of dispatches needed to not miss the first input
     // it should let the bar initialize the surfaces and buffers needed
-    for _ in 0..5 {
-        event_queue.blocking_dispatch(&mut bar).unwrap();
+    while !bar.is_running() {
+        event_queue.roundtrip(&mut bar).unwrap();
     }
 
     (bar, event_queue)

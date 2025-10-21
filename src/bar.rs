@@ -67,7 +67,7 @@ impl Bar {
         let outputs = Vec::new();
 
         Self {
-            running: true,
+            running: false,
             shm,
             font,
             compositor,
@@ -78,7 +78,7 @@ impl Bar {
         }
     }
 
-    pub fn keep_running(&self) -> bool {
+    pub fn is_running(&self) -> bool {
         self.running
     }
 
@@ -261,6 +261,8 @@ impl Dispatch<zwlr_layer_surface_v1::ZwlrLayerSurfaceV1, ()> for Bar {
 
                 // tell the proxy that you acknowledge the config request
                 proxy.ack_configure(serial);
+
+                state.running = true;
 
                 // create new shared memory
                 output.pixels = Pixels::new(width, height);
