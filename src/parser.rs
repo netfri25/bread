@@ -124,7 +124,7 @@ impl FromStr for Color {
 
         match s.len() {
             6 => color.a = 0xFF,
-            8 => {},
+            8 => {}
             _ => return Err(()),
         }
 

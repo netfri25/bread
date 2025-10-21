@@ -16,7 +16,7 @@ use crate::token::Token;
 pub struct SectionInfo<'a> {
     pub width: f32,
     pub mult: f32,
-    pub indices: &'a [usize]
+    pub indices: &'a [usize],
 }
 
 pub struct Bar {
@@ -122,22 +122,21 @@ impl Bar {
         // abstracted away.
         let l_section = SectionInfo {
             width: l_width,
-            mult: 0.,   // start = (pixels - width) * 0
+            mult: 0., // start = (pixels - width) * 0
             indices: l.as_slice(),
         };
 
         let c_section = SectionInfo {
             width: c_width,
-            mult: 0.5,  // start = (pixels - width) * 0.5
+            mult: 0.5, // start = (pixels - width) * 0.5
             indices: c.as_slice(),
         };
 
         let r_section = SectionInfo {
             width: r_width,
-            mult: 1.,   // start = (pixels - width) * 1
+            mult: 1., // start = (pixels - width) * 1
             indices: r.as_slice(),
         };
-
 
         let sections = [l_section, c_section, r_section];
 
@@ -201,7 +200,11 @@ impl Dispatch<wl_output::WlOutput, ()> for Bar {
         qhandle: &QueueHandle<Self>,
     ) {
         if let wl_output::Event::Done = event {
-            if let Some(index) = state.outputs.iter().position(|o| o.output.id() == proxy.id()) {
+            if let Some(index) = state
+                .outputs
+                .iter()
+                .position(|o| o.output.id() == proxy.id())
+            {
                 state.outputs.swap_remove(index);
             }
 

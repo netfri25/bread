@@ -34,11 +34,7 @@ impl Pixels {
 
         mmap.advise(Advice::Random).expect("advice");
 
-        Self {
-            mfd,
-            mmap,
-            width
-        }
+        Self { mfd, mmap, width }
     }
 
     pub const fn width(&self) -> u32 {

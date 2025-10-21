@@ -11,12 +11,12 @@ const WAYLAND_TOKEN: mio::Token = mio::Token(1);
 
 mod bar;
 mod collector;
+mod config;
 mod draw_state;
 mod output;
 mod parser;
 mod pixels;
 mod token;
-mod config;
 
 use crate::bar::Bar;
 use crate::collector::Collector;
@@ -36,7 +36,7 @@ macro_rules! bench {
         } else {
             $block
         }
-    }}
+    }};
 }
 
 fn main() {
@@ -76,7 +76,11 @@ fn main() {
 
     // register the wayland socket
     poll.registry()
-        .register(&mut SourceFd(&wayland_fd), WAYLAND_TOKEN, Interest::READABLE)
+        .register(
+            &mut SourceFd(&wayland_fd),
+            WAYLAND_TOKEN,
+            Interest::READABLE,
+        )
         .unwrap();
 
     let mut buf = Vec::new();

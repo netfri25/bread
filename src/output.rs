@@ -10,11 +10,11 @@ use wayland_protocols_wlr::layer_shell::v1::client::zwlr_layer_surface_v1::{
 use wayland_protocols_wlr::layer_shell::v1::client::{zwlr_layer_shell_v1, zwlr_layer_surface_v1};
 
 use crate::bar::SectionInfo;
+use crate::bench;
 use crate::config::Config;
 use crate::draw_state::DrawState;
 use crate::pixels::{Color, Pixels};
 use crate::token::Token;
-use crate::bench;
 
 // each wl_output needs it's own zwlr_layer_surface and wl_surface
 // buffer can't shared between all surfaces, since some may have a different size
@@ -116,9 +116,11 @@ impl Output {
             let pixels_width = self.pixels.width() as f32;
             for section in sections {
                 let start = (pixels_width - section.width) * section.mult;
-                let mut draw_state = DrawState::new(&mut self.pixels, font, start, self.fg, self.bg);
+                let mut draw_state =
+                    DrawState::new(&mut self.pixels, font, start, self.fg, self.bg);
 
-                for &index in section.indices { let token = &tokens[index];
+                for &index in section.indices {
+                    let token = &tokens[index];
                     match token {
                         Token::Text(text) => draw_state.draw_text(text),
                         Token::Fg(color) => draw_state.set_fg(*color),
@@ -143,7 +145,8 @@ impl Output {
         let pixels_width = self.pixels.width() as f32;
         for section in sections {
             let start_x = (pixels_width - section.width) * section.mult;
-            self.wl_surface.damage(start_x as i32, 0, section.width as i32, height);
+            self.wl_surface
+                .damage(start_x as i32, 0, section.width as i32, height);
         }
 
         self.wl_surface.commit();
