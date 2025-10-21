@@ -1,4 +1,5 @@
 use ab_glyph::{Font as _, FontVec, PxScale, PxScaleFont};
+use rust_fontconfig::{FcFontCache, FcPattern};
 use wayland_client::protocol::{
     wl_buffer, wl_compositor, wl_output, wl_registry, wl_shm, wl_shm_pool, wl_surface,
 };
@@ -34,10 +35,32 @@ impl Bar {
         compositor: wl_compositor::WlCompositor,
         shm: wl_shm::WlShm,
         layer_shell: zwlr_layer_shell_v1::ZwlrLayerShellV1,
-        config: Config,
+        mut config: Config,
     ) -> Self {
+        let fc = FcFontCache::build();
+
+        let pattern = if let Some(font) = config.font.take() {
+            FcPattern {
+                name: Some(font),
+                ..Default::default()
+            }
+        } else {
+            FcPattern::default()
+        };
+
+        let Some(m) = fc.query(&pattern, &mut Vec::new()) else {
+            if let Some(name) = pattern.name {
+                eprintln!("ERROR: no such font '{}'", name);
+            } else {
+                eprintln!("ERROR: no font available");
+            }
+
+            std::process::exit(1);
+        };
+
+        let font_data = fc.get_font_bytes(&m.id).expect("font should be accessible");
+
         let scale = PxScale::from(config.font_size as f32);
-        let font_data = std::fs::read(&config.font).unwrap();
         let font = FontVec::try_from_vec(font_data).unwrap();
         let font = font.into_scaled(scale);
 
