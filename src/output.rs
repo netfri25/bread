@@ -57,9 +57,15 @@ impl Output {
             (),
         );
 
+        let anchor = if config.top {
+            Anchor::Left | Anchor::Right | Anchor::Top
+        } else {
+            Anchor::Left | Anchor::Right | Anchor::Bottom
+        };
+
         layer_surface.set_size(0, config.height);
         layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
-        layer_surface.set_anchor(Anchor::Left | Anchor::Right | Anchor::Bottom);
+        layer_surface.set_anchor(anchor);
         layer_surface.set_exclusive_zone(config.height as i32);
         wl_surface.commit();
 

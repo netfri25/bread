@@ -4,6 +4,9 @@ use crate::pixels::Color;
 
 #[derive(Parser)]
 pub struct Config {
+    #[arg(long, short)]
+    pub top: bool,
+
     #[arg(short, long)]
     pub font: Option<String>,
 

@@ -76,7 +76,7 @@ the only things I had issues with while trying out zelbar is that I wasn't able 
  - [ ] cli arguments for simple config
     - [x] default fg/bg colors
     - [x] height
-    - [ ] position (top/bottom)
+    - [x] position (top/bottom)
     - [x] font
     - [x] font size
     - [ ] specific monitor (or all monitors by default)
