@@ -47,7 +47,7 @@ impl Output {
         T: Dispatch<wl_buffer::WlBuffer, ()>,
     {
         let wl_surface = compositor.create_surface(qhandle, ());
-        let namespace = String::new();
+        let namespace = "bread".to_string();
         let layer_surface = layer_shell.get_layer_surface(
             &wl_surface,
             Some(&output),
