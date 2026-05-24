@@ -87,11 +87,11 @@ impl<'pixels, 'font, F: Font> DrawState<'pixels, 'font, F> {
         let max_y = self.pixels.height() - size.h;
         for x in 0..size.w {
             let x = self.x.ceil() as u32 + x;
-            for y in 0..=max_y {
+            for y in 0..max_y {
                 self.pixels.set(x, y, self.bg);
             }
 
-            for y in max_y + 1..self.pixels.height() {
+            for y in max_y..self.pixels.height() {
                 self.pixels.set(x, y, self.fg);
             }
         }
